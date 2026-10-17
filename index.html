@@ -3,284 +3,347 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Пепельный Тракт — Telegram RPG</title>
+<title>Пепельный Тракт</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
-    --bg: #0d0c12; --panel: #171520; --card: #211e2e; --border: #38324c;
-    --gold: #f5b942; --hp: #e63946; --accent: #9d4edd; --text: #f1eef7; --muted: #8e87a3;
+    --bg: #0d0914; --panel: #16121f; --card: #1e192c; --border: #3a2f54;
+    --gold: #ffc857; --hp: #e63946; --accent: #8a2be2; --text: #e0dced; --muted: #8b839c;
+    --btn: #2a233b; --btn-hover: #3d3356;
   }
   * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
   body { background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ПАНЕЛИ И UI (остались прежними для сохранения структуры) */
-  .top-bar { background: var(--panel); padding: 10px 14px; border-bottom: 1px solid var(--border); z-index: 10; }
-  .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; margin-bottom: 8px;}
-  .stat-pill { background: rgba(255,255,255,0.06); padding: 5px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
-  .hp-bar-wrap { width: 100%; height: 10px; background: #2a2438; border-radius: 5px; }
-  .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #e63946, #ff6b6b); transition: width 0.3s; }
+  /* ПАНЕЛЬ СТАТИСТИКИ */
+  .top-bar { background: var(--panel); padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+  .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; }
+  .stat-pill { background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.05); }
+  .hp-bar-wrap { width: 100%; height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
+  .hp-bar-fill { height: 100%; background: var(--hp); transition: width 0.3s; }
   
-  .runner-track { background: #12101a; padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; font-size: 12px; color: var(--muted); }
-  .step-dots { display: flex; gap: 5px; flex: 1; margin: 0 12px; }
-  .dot { flex: 1; height: 6px; background: #2a2538; border-radius: 3px; }
+  .progress-track { display: flex; gap: 4px; padding: 10px 12px; background: #08060a; }
+  .dot { flex: 1; height: 4px; background: #1e192c; border-radius: 2px; }
   .dot.done { background: var(--accent); }
-  .dot.current { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
-  .dot.boss { background: var(--hp); height: 10px; }
+  .dot.current { background: var(--gold); box-shadow: 0 0 5px var(--gold); }
 
-  /* ЦЕНТРАЛЬНАЯ СЦЕНА И АНИМАЦИИ */
-  .stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; position: relative; overflow: hidden; }
+  /* ЦЕНТРАЛЬНАЯ СЦЕНА (ИГРОВАЯ КАРТОЧКА) */
+  .stage { flex: 1; padding: 16px; display: flex; flex-direction: column; justify-content: center; position: relative; }
   
-  /* ПАРАЛЛАКС ФОН ДЛЯ БЕГА */
-  .scrolling-bg {
-    position: absolute; inset: 0; z-index: 0; opacity: 0.3;
-    background: repeating-linear-gradient(90deg, transparent 0%, rgba(157,78,221,0.1) 50%, transparent 100%);
-    background-size: 200% 100%;
-    animation: scrollBg 3s linear infinite;
-    display: none;
+  .game-card {
+    background: var(--card); border: 2px solid var(--border); border-radius: 20px; 
+    overflow: hidden; display: flex; flex-direction: column; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    animation: fadeIn 0.3s ease;
   }
-  @keyframes scrollBg { 0% { background-position: 0 0; } 100% { background-position: -200% 0; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-  .game-card { width: 100%; max-width: 340px; min-height: 380px; background: #191624; border: 2px solid var(--border); border-radius: 22px; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 2; transition: transform 0.15s; }
+  .card-img-wrap { width: 100%; height: 220px; position: relative; background: #000; }
+  .card-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: 0.3s; }
+  .card-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid var(--accent); padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; backdrop-filter: blur(4px); z-index: 2; }
   
-  /* ИЗОБРАЖЕНИЯ И АРТЫ */
-  .art-container { width: 120px; height: 120px; border-radius: 16px; margin: 10px 0; overflow: hidden; border: 2px solid var(--border); position: relative; background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-  .art-img { width: 100%; height: 100%; object-fit: cover; }
-  
-  /* ДИАЛОГИ */
-  .dialogue-box { background: rgba(0,0,0,0.5); border-left: 3px solid var(--accent); padding: 10px; margin: 10px 0; font-size: 13px; font-style: italic; color: #d6d1e6; text-align: left; width: 100%; border-radius: 0 8px 8px 0; min-height: 50px; }
-  
-  .swipe-hints { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
-  .choice-btn { background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text); padding: 11px 8px; border-radius: 12px; font-size: 12px; cursor: pointer; }
+  .card-content { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+  .card-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; text-align: center; color: var(--gold); }
+  .card-desc { font-size: 14px; color: var(--muted); line-height: 1.5; text-align: center; margin-bottom: 16px; min-height: 42px; }
 
-  /* АНИМАЦИИ БОЯ И БЕГА */
-  @keyframes runAnim { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-10px) rotate(3deg); } 75% { transform: translateY(-10px) rotate(-3deg); } }
-  .running { animation: runAnim 0.6s infinite ease-in-out; }
-  
-  .battle-arena { width: 100%; display: flex; flex-direction: column; gap: 20px; align-items: center; z-index: 2; }
-  .fighters-row { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 15px; position: relative; }
-  .fighter { flex: 1; display: flex; flex-direction: column; align-items: center; transition: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
-  
-  /* ЭФФЕКТЫ УДАРА */
-  .atk-right { transform: translateX(30px) scale(1.1); z-index: 10; }
-  .atk-left { transform: translateX(-30px) scale(1.1); z-index: 10; }
-  .hit-shake { animation: shake 0.3s; filter: brightness(2) 0; border-color: var(--hp) !important; }
-  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  /* КНОПКИ ВЫБОРА */
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+  .actions.single { grid-template-columns: 1fr; }
+  .btn { background: var(--btn); border: 1px solid var(--border); color: var(--text); padding: 14px 10px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.1s; }
+  .btn:active { background: var(--btn-hover); transform: scale(0.96); }
+  .btn-hint { font-size: 10px; color: var(--muted); font-weight: normal; }
+  .btn-accent { border-color: var(--hp); background: rgba(230, 57, 70, 0.1); }
 
-  .slash-effect { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 90 L90 10" stroke="red" stroke-width="8" stroke-linecap="round"/></svg>') no-repeat center; opacity: 0; pointer-events: none; z-index: 20; transition: 0.1s; }
-  .slash-active { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+  /* НИЖНЯЯ ПАНЕЛЬ ИНВЕНТАРЯ */
+  .bottom-bar { background: var(--panel); border-top: 1px solid var(--border); padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; z-index: 10; }
+  .slot { background: var(--btn); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; text-align: center; font-size: 11px; color: var(--muted); cursor: pointer; transition: 0.1s; }
+  .slot:active { transform: scale(0.92); }
+  .slot-icon { font-size: 20px; margin-bottom: 4px; display: block; }
+  .slot-stat { color: var(--text); font-weight: bold; margin-top: 2px; }
 
-  .bottom-bar { background: var(--panel); padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; z-index: 10; }
-  .slot { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 6px; text-align: center; font-size: 10px; }
-  .slot-img { width: 30px; height: 30px; margin-bottom: 4px; object-fit: contain; }
+  /* ЭФФЕКТЫ БОЯ */
+  .hit-shake { animation: shake 0.4s; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); filter: brightness(1); } 25% { transform: translateX(-8px); filter: brightness(2) 0; } 75% { transform: translateX(8px); } }
+
 </style>
 </head>
 <body>
 
 <div class="top-bar">
   <div class="stats-row">
-    <div class="stat-pill">❤️ <span id="hp-txt">100</span></div>
+    <div class="stat-pill">❤️ <span id="hp-txt">100/100</span></div>
     <div class="stat-pill">⚔️ <span id="atk-txt">12</span></div>
     <div class="stat-pill">🛡️ <span id="def-txt">3</span></div>
-    <div class="stat-pill" style="color:var(--gold)">🪙 <span id="gold-txt">50</span></div>
+    <div class="stat-pill" style="color:var(--gold)">🪙 <span id="gold-txt">0</span></div>
   </div>
   <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
 </div>
-
-<div class="runner-track">
-  <div class="step-dots" id="step-dots"></div>
-</div>
+<div class="progress-track" id="progress"></div>
 
 <div class="stage" id="stage">
-  <div class="scrolling-bg" id="bg-effect"></div>
-  <div id="stage-content" style="width: 100%; display: flex; justify-content: center;"></div>
+  <!-- Тут генерируются карточки -->
 </div>
 
 <div class="bottom-bar">
-  <div class="slot"><img src="https://api.dicebear.com/7.x/icons/svg?seed=sword" class="slot-img"><br><span id="w-stat">Оружие</span></div>
-  <div class="slot"><img src="https://api.dicebear.com/7.x/icons/svg?seed=shield" class="slot-img"><br><span id="a-stat">Броня</span></div>
-  <div class="slot"><img src="https://api.dicebear.com/7.x/icons/svg?seed=ring" class="slot-img"><br><span id="r-stat">Кольцо</span></div>
-  <div class="slot"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=ally" class="slot-img"><br><span id="ally-stat">Напарник</span></div>
+  <div class="slot" onclick="alert('Твое Оружие: ' + state.eq.weapon.name + ' (+'+state.eq.weapon.stat+' АТК)')">
+    <span class="slot-icon">🗡️</span>Оружие<div class="slot-stat" id="eq-w">+5</div>
+  </div>
+  <div class="slot" onclick="alert('Твоя Броня: ' + state.eq.armor.name + ' (+'+state.eq.armor.stat+' ЗАЩ)')">
+    <span class="slot-icon">🛡️</span>Броня<div class="slot-stat" id="eq-a">+2</div>
+  </div>
+  <div class="slot" onclick="alert('Твое Кольцо: ' + state.eq.ring.name + ' (+'+state.eq.ring.stat+' HP)')">
+    <span class="slot-icon">💍</span>Кольцо<div class="slot-stat" id="eq-r">+0</div>
+  </div>
+  <div class="slot" onclick="alert(state.ally ? 'Напарник: ' + state.ally.name + ' (+'+state.ally.atk+' АТК)' : 'Нет напарника')">
+    <span class="slot-icon">👤</span>Напарник<div class="slot-stat" id="eq-al">Нет</div>
+  </div>
 </div>
 
 <script>
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-  if (tg) { tg.expand(); }
+  if (tg) { tg.expand(); tg.ready(); }
   function haptic(type = 'light') { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type); }
 
-  const state = { step: 1, maxSteps: 8, hp: 100, maxHp: 100, atk: 7, def: 1, gold: 60 };
+  // Генератор картинок на лету (запросы к ИИ)
+  const imgAPI = (prompt) => `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=400&height=300&nologo=true`;
 
-  // БАЗА АРТОВ (Здесь ты потом заменишь ссылки URL на свои картинки)
-  const assets = {
-    hero: "https://api.dicebear.com/7.x/adventurer/svg?seed=Gonec&backgroundColor=171520",
-    runBg: "https://api.dicebear.com/7.x/shapes/svg?seed=forest",
-    enemies: [
-      { name: "Гончая Углей", img: "https://api.dicebear.com/7.x/bottts/svg?seed=Wolf&backgroundColor=4a1515", hp: 50, atk: 10 },
-      { name: "Мародер", img: "https://api.dicebear.com/7.x/adventurer/svg?seed=Bandit&backgroundColor=2d2a1c", hp: 60, atk: 12 },
-      { name: "Босс: Висельник", img: "https://api.dicebear.com/7.x/bottts/svg?seed=Boss1&backgroundColor=300707", hp: 150, atk: 20, isBoss: true }
-    ],
-    items: {
-      weapon: { img: "https://api.dicebear.com/7.x/icons/svg?seed=sword2", stat: 15 },
-      armor: { img: "https://api.dicebear.com/7.x/icons/svg?seed=armor2", stat: 8 }
-    }
+  const state = {
+    step: 1, maxSteps: 7, act: 1,
+    hp: 100, maxHp: 100, baseAtk: 7, baseDef: 1, gold: 20,
+    eq: { 
+      weapon: { name: "Ржавый меч", stat: 5 }, 
+      armor: { name: "Старая накидка", stat: 2 }, 
+      ring: { name: "Пусто", stat: 0 } 
+    },
+    ally: null
   };
 
   function updateHUD() {
-    document.getElementById('hp-txt').innerText = state.hp;
-    document.getElementById('hp-bar').style.width = `${(state.hp / state.maxHp) * 100}%`;
+    state.maxHp = 100 + state.eq.ring.stat;
+    if (state.hp > state.maxHp) state.hp = state.maxHp;
+    
+    document.getElementById('hp-txt').innerText = `${state.hp}/${state.maxHp}`;
+    document.getElementById('hp-bar').style.width = `${(state.hp/state.maxHp)*100}%`;
+    document.getElementById('atk-txt').innerText = state.baseAtk + state.eq.weapon.stat + (state.ally ? state.ally.atk : 0);
+    document.getElementById('def-txt').innerText = state.baseDef + state.eq.armor.stat;
     document.getElementById('gold-txt').innerText = state.gold;
-    const dots = document.getElementById('step-dots');
-    dots.innerHTML = '';
-    for (let i = 1; i <= state.maxSteps; i++) {
-      dots.innerHTML += `<div class="dot ${i < state.step ? 'done' : i === state.step ? 'current' : ''}"></div>`;
+    
+    document.getElementById('eq-w').innerText = `+${state.eq.weapon.stat}`;
+    document.getElementById('eq-a').innerText = `+${state.eq.armor.stat}`;
+    document.getElementById('eq-r').innerText = `+${state.eq.ring.stat}`;
+    document.getElementById('eq-al').innerText = state.ally ? `+${state.ally.atk}` : 'Нет';
+
+    let dots = '';
+    for(let i=1; i<=state.maxSteps; i++) {
+      dots += `<div class="dot ${i < state.step ? 'done' : i === state.step ? 'current' : ''}"></div>`;
     }
+    document.getElementById('progress').innerHTML = dots;
   }
 
-  // ЭФФЕКТ ПЕЧАТИ ТЕКСТА ДЛЯ ДИАЛОГОВ
-  function typeText(elementId, text, speed = 30) {
-    const el = document.getElementById(elementId);
-    el.innerHTML = '';
-    let i = 0;
-    function type() {
-      if (i < text.length) {
-        el.innerHTML += text.charAt(i);
-        i++;
-        setTimeout(type, speed);
-      }
+  function renderCard({ badge, img, title, desc, btnLeft, btnRight, actionLeft, actionRight, isSingleBtn }) {
+    const stage = document.getElementById('stage');
+    
+    let btnsHTML = '';
+    if (isSingleBtn) {
+      btnsHTML = `<button class="btn" onclick="haptic(); ${actionLeft}"><span>${btnLeft.text}</span><span class="btn-hint">${btnLeft.hint}</span></button>`;
+    } else {
+      btnsHTML = `
+        <button class="btn" onclick="haptic('medium'); ${actionLeft}"><span>${btnLeft.text}</span><span class="btn-hint">${btnLeft.hint}</span></button>
+        <button class="btn ${btnRight.isDanger ? 'btn-accent' : ''}" onclick="haptic('heavy'); ${actionRight}"><span>${btnRight.text}</span><span class="btn-hint">${btnRight.hint}</span></button>
+      `;
     }
-    type();
-  }
 
-  // АНИМАЦИЯ БЕГА
-  function runForward() {
+    stage.innerHTML = `
+      <div class="game-card" id="current-card">
+        <div class="card-img-wrap">
+          <div class="card-badge">${badge}</div>
+          <img src="${img}" class="card-img" id="card-image">
+        </div>
+        <div class="card-content">
+          <div class="card-title">${title}</div>
+          <div class="card-desc">${desc}</div>
+          <div class="actions ${isSingleBtn ? 'single' : ''}">${btnsHTML}</div>
+        </div>
+      </div>
+    `;
     updateHUD();
-    document.getElementById('bg-effect').style.display = 'block';
+  }
+
+  // --- ИГРОВОЙ ЦИКЛ ---
+
+  function startStep() {
+    updateHUD();
+    if (state.step > state.maxSteps) {
+      state.act++;
+      state.step = 1;
+    }
     
-    document.getElementById('stage-content').innerHTML = `
-      <div class="game-card" style="border:none; background:transparent; box-shadow:none;">
-        <div class="art-container running" style="width:160px; height:160px; border-radius:50%; background:transparent; border:none;">
-          <img src="${assets.hero}" class="art-img">
-        </div>
-        <div class="dialogue-box" id="run-text" style="text-align:center; border:none; background:transparent;"></div>
-      </div>
-    `;
-    typeText('run-text', "Гонец мчится по пепельному тракту...");
-    haptic('light');
+    // Анимация бега от первого лица
+    renderCard({
+      badge: "В пути",
+      img: imgAPI(`first person view running down a dark stone road, dark fantasy rpg background, gloomy, act ${state.act}`),
+      title: `Тракт, Километр ${state.step}`,
+      desc: "Ты бежишь вперед. Туман сзади подступает всё ближе. Нужно двигаться.",
+      isSingleBtn: true,
+      btnLeft: { text: "Бежать дальше", hint: "Сделать шаг" },
+      actionLeft: "resolveEncounter()"
+    });
+  }
+
+  function resolveEncounter() {
+    if (state.step === state.maxSteps) return bossEncounter();
     
-    setTimeout(() => {
-      document.getElementById('bg-effect').style.display = 'none';
-      triggerEncounter();
-    }, 1800);
+    const roll = Math.random();
+    if (roll < 0.3) storyEvent1();
+    else if (roll < 0.6) storyEvent2();
+    else startBattle(generateEnemy());
   }
 
-  function triggerEncounter() {
-    if (state.step === state.maxSteps) return startBattle(assets.enemies[2]); // Boss
-    Math.random() > 0.5 ? showDialogueEvent() : startBattle(assets.enemies[0]);
+  // --- СЮЖЕТНЫЕ СОБЫТИЯ ---
+
+  function storyEvent1() {
+    renderCard({
+      badge: "Развилка",
+      img: imgAPI("dark fantasy broken bridge over mist, glowing runes, rpg landscape"),
+      title: "Разрушенный мост",
+      desc: "Прямой путь разрушен. Можно спуститься в ущелье (опасно, но есть шанс найти лут) или пойти в обход.",
+      btnLeft: { text: "В обход", hint: "Безопасно" },
+      btnRight: { text: "В ущелье", hint: "Бой и Трофей" },
+      actionLeft: "state.step++; startStep();",
+      actionRight: "startBattle(generateEnemy(), true)" // true = гарантированный лут
+    });
   }
 
-  // ДИАЛОГИ С NPC И СОБЫТИЯ
-  function showDialogueEvent() {
-    document.getElementById('stage-content').innerHTML = `
-      <div class="game-card">
-        <div style="font-size:12px; color:var(--accent);">ВСТРЕЧА В ПУТИ</div>
-        <div class="art-container"><img src="https://api.dicebear.com/7.x/adventurer/svg?seed=NPC" class="art-img"></div>
-        <div style="font-weight:bold; margin-bottom:5px;">Загадочный Торговец</div>
-        <div class="dialogue-box" id="npc-dialogue"></div>
-        <div class="swipe-hints">
-          <button class="choice-btn" onclick="nextStep(false)">Пройти мимо</button>
-          <button class="choice-btn" onclick="nextStep(true)">Купить (20 🪙)</button>
-        </div>
-      </div>
-    `;
-    typeText('npc-dialogue', "«Псс, путник... Туман близко. Не хочешь усилить свой клинок за пару монет?»");
+  function storyEvent2() {
+    renderCard({
+      badge: "Алтарь",
+      img: imgAPI("dark fantasy bloody stone altar in forest glowing red, rpg"),
+      title: "Алтарь Жертвы",
+      desc: "Статуя требует крови. Если пожертвовать здоровьем, она может даровать случайный артефакт.",
+      btnLeft: { text: "Уйти", hint: "Остаться целым" },
+      btnRight: { text: "Пролить кровь", hint: "-25 ❤️, Получить вещь", isDanger: true },
+      actionLeft: "state.step++; startStep();",
+      actionRight: "state.hp -= 25; if(state.hp<=0) state.hp=1; showLoot();"
+    });
   }
 
-  // АНИМАЦИЯ БОЯ С КАРТИНКАМИ
-  function startBattle(enemy) {
+  // --- БОЕВКА ---
+
+  function generateEnemy() {
+    const names = ["Скверный Мародер", "Гончая Углей", "Мертвый Стражник", "Упырь"];
+    const mult = 1 + (state.act * 0.3) + (state.step * 0.1);
+    return {
+      name: names[Math.floor(Math.random() * names.length)],
+      hp: Math.floor(40 * mult),
+      atk: Math.floor(10 * mult),
+      img: imgAPI("dark fantasy scary monster enemy, dark background, rpg character portrait")
+    };
+  }
+
+  function bossEncounter() {
+    const boss = {
+      name: "Древний Страж",
+      hp: 120 * state.act,
+      atk: 18 * state.act,
+      img: imgAPI("epic dark fantasy armored boss monster with glowing eyes standing on road")
+    };
+    renderCard({
+      badge: "БОСС ЛОКАЦИИ",
+      img: boss.img,
+      title: boss.name,
+      desc: `Впереди страж... Готовь оружие, или этот путь станет последним! Здоровье врага: ❤️ ${boss.hp}`,
+      btnLeft: { text: "Сбежать", hint: "-20 ❤️, назад на шаг" },
+      btnRight: { text: "В БОЙ!", hint: "Смертельная битва", isDanger: true },
+      actionLeft: "state.hp -= 20; state.step--; startStep();",
+      actionRight: `processCombat(${JSON.stringify(boss)}, true)`
+    });
+  }
+
+  function startBattle(enemy, guaranteedLoot = false) {
+    renderCard({
+      badge: "ВРАГ НА ПУТИ",
+      img: enemy.img,
+      title: enemy.name,
+      desc: `Он преградил дорогу. \nУ врага: ❤️ ${enemy.hp} | ⚔️ ${enemy.atk}`,
+      btnLeft: { text: "Пройти мимо", hint: "Невозможно" }, // Просто для визуала 2 кнопок
+      btnRight: { text: "Атаковать", hint: "Начать автобой", isDanger: true },
+      actionLeft: "haptic('error');",
+      actionRight: `processCombat(${JSON.stringify(enemy)}, ${guaranteedLoot})`
+    });
+  }
+
+  function processCombat(enemy, guaranteedLoot) {
+    const imgEl = document.getElementById('card-image');
     let eHp = enemy.hp;
-    document.getElementById('stage-content').innerHTML = `
-      <div class="battle-arena">
-        <div style="color:var(--hp); font-weight:900;">${enemy.isBoss ? 'БИТВА С БОССОМ' : 'АВТОБОЙ'}</div>
-        <div class="fighters-row">
-          <div class="fighter" id="hero-model">
-            <div class="art-container" style="border-color:var(--accent)"><img src="${assets.hero}" class="art-img"></div>
-            <div>❤️ ${state.hp}</div>
-          </div>
-          <div class="slash-effect" id="slash"></div>
-          <div class="fighter" id="enemy-model">
-            <div class="art-container" style="border-color:var(--hp)"><img src="${enemy.img}" class="art-img"></div>
-            <div id="e-hp-txt">❤️ ${eHp}</div>
-          </div>
-        </div>
-        <div class="dialogue-box" id="battle-log" style="text-align:center;">Противники сближаются...</div>
-      </div>
-    `;
+    const myAtk = state.baseAtk + state.eq.weapon.stat + (state.ally ? state.ally.atk : 0);
+    const myDef = state.baseDef + state.eq.armor.stat;
 
-    const timer = setInterval(() => {
-      const hero = document.getElementById('hero-model');
-      const opp = document.getElementById('enemy-model');
-      const slash = document.getElementById('slash');
+    // Имитация пошагового удара
+    const interval = setInterval(() => {
+      // Мой удар
+      eHp -= myAtk;
+      imgEl.classList.add('hit-shake');
+      haptic('medium');
+      setTimeout(() => imgEl.classList.remove('hit-shake'), 400);
+
+      if (eHp <= 0) {
+        clearInterval(interval);
+        state.gold += 15 * state.act;
+        if (guaranteedLoot || Math.random() > 0.4) setTimeout(() => showLoot(), 600);
+        else { state.step++; setTimeout(() => startStep(), 600); }
+        return;
+      }
+
+      // Удар врага
+      const dmg = Math.max(1, enemy.atk - myDef);
+      state.hp -= dmg;
+      updateHUD();
+      haptic('heavy');
       
-      // Анимация удара героя
-      hero.classList.add('atk-right');
-      setTimeout(() => {
-        hero.classList.remove('atk-right');
-        opp.classList.add('hit-shake');
-        slash.classList.add('slash-active');
-        eHp -= state.atk * 2; 
-        document.getElementById('e-hp-txt').innerText = `❤️ ${Math.max(0, eHp)}`;
-        document.getElementById('battle-log').innerText = `Ты наносишь мощный удар!`;
-        haptic('medium');
-        
-        setTimeout(() => { opp.classList.remove('hit-shake'); slash.classList.remove('slash-active'); }, 200);
-        
-        if (eHp <= 0) {
-          clearInterval(timer);
-          state.gold += 30;
-          setTimeout(() => showLoot(), 800);
-          return;
-        }
-
-        // Ответный удар врага
-        setTimeout(() => {
-          opp.classList.add('atk-left');
-          setTimeout(() => {
-            opp.classList.remove('atk-left');
-            hero.classList.add('hit-shake');
-            state.hp -= enemy.atk;
-            updateHUD();
-            document.getElementById('battle-log').innerText = `${enemy.name} контратакует!`;
-            haptic('heavy');
-            setTimeout(() => hero.classList.remove('hit-shake'), 200);
-            
-            if (state.hp <= 0) clearInterval(timer);
-          }, 150);
-        }, 600);
-      }, 150);
-    }, 1800);
+      if (state.hp <= 0) {
+        clearInterval(interval);
+        alert("Ты погиб! Осколок переносит тебя в начало пути.");
+        state.hp = state.maxHp; state.step = 1;
+        startStep();
+      }
+    }, 800);
   }
+
+  // --- ЛУТ И ЭКИПИРОВКА ---
 
   function showLoot() {
-    document.getElementById('stage-content').innerHTML = `
-      <div class="game-card">
-        <div style="color:var(--gold); font-weight:bold;">ТРОФЕЙ</div>
-        <div class="art-container" style="border-color:var(--gold); background:#2a2015;">
-          <img src="${assets.items.weapon.img}" class="art-img" style="padding:15px;">
-        </div>
-        <h3>Эфирный Клинок</h3>
-        <p style="color:var(--muted); font-size:13px; margin:10px 0;">+15 к Атаке</p>
-        <button class="choice-btn" style="width:100%" onclick="nextStep(false)">Забрать и идти дальше</button>
-      </div>
-    `;
+    const types = ['weapon', 'armor', 'ring'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const names = { weapon: ["Клык Бездны", "Эфирный Меч"], armor: ["Темные Латы", "Плащ Тени"], ring: ["Кольцо Жизни", "Руна Крови"] };
+    const name = names[type][Math.floor(Math.random()*2)];
+    
+    const mult = 1 + (state.act * 0.5) + (state.step * 0.1);
+    const stat = Math.floor((type === 'ring' ? 20 : 6) * mult);
+    const sellPrice = stat * 2;
+    
+    const statName = type === 'weapon' ? 'АТК' : type === 'armor' ? 'ЗАЩ' : 'HP';
+    const oldStat = state.eq[type].stat;
+    const diff = stat - oldStat;
+    const diffText = diff >= 0 ? `+${diff} лучше` : `${diff} хуже`;
+
+    // Сохраняем сгенерированный предмет глобально для функции кнопок
+    window.tempLoot = { type, name, stat };
+    
+    let prompt = type === 'weapon' ? 'epic magic sword' : type === 'armor' ? 'epic dark fantasy armor' : 'glowing magic ring';
+
+    renderCard({
+      badge: "ТРОФЕЙ",
+      img: imgAPI(`${prompt} glowing isolated on black background, rpg inventory item`),
+      title: name,
+      desc: `Дает +${stat} ${statName}. <br><span style="color:${diff>=0?'#4cc9f0':'#e63946'}; font-size:12px;">(На ${diffText} твоей вещи)</span>`,
+      btnLeft: { text: "Продать", hint: `+${sellPrice} 🪙` },
+      btnRight: { text: "Надеть", hint: "Заменить старое" },
+      actionLeft: `state.gold += ${sellPrice}; state.step++; startStep();`,
+      actionRight: `state.eq['${type}'] = window.tempLoot; state.step++; startStep();`
+    });
   }
 
-  function nextStep(bought) {
-    if(bought && state.gold >= 20) { state.gold -= 20; state.atk += 5; }
-    state.step++;
-    if (state.step > state.maxSteps) { state.step = 1; state.hp = state.maxHp; } // Новый акт
-    runForward();
-  }
-
-  runForward();
+  // Запуск игры
+  startStep();
 </script>
 </body>
 </html>
