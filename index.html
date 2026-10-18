@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>CYBER SURVIVOR // TMA 3D</title>
+  <title>CYBER SURVIVOR 2.0 // TMA 3D</title>
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Three.js CDN -->
@@ -11,11 +11,12 @@
   <style>
     :root {
       --bg-dark: #06060c;
-      --panel-bg: rgba(12, 14, 28, 0.88);
+      --panel-bg: rgba(12, 14, 28, 0.9);
       --neon-cyan: #00f3ff;
       --neon-pink: #ff0055;
       --neon-yellow: #fcee0a;
       --neon-green: #00ff88;
+      --neon-purple: #b800ff;
       --text-main: #e8f4ff;
       --font-main: 'Segoe UI', Roboto, Helvetica, sans-serif;
     }
@@ -30,17 +31,20 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* Жесткая блокировка скролла и свайпа сворачивания в Telegram Mini Apps */
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
       background-color: var(--bg-dark);
       color: var(--text-main);
       font-family: var(--font-main);
-      touch-action: none;
     }
 
-    /* 3D Canvas */
     #game-canvas {
       position: fixed;
       top: 0;
@@ -48,9 +52,9 @@
       width: 100%;
       height: 100%;
       z-index: 1;
+      touch-action: none;
     }
 
-    /* Эффект киберпанк-сканлайнов и виньетки */
     .cyber-overlay {
       position: fixed;
       inset: 0;
@@ -61,7 +65,7 @@
         repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 3px);
     }
 
-    /* Базовые экраны */
+    /* Экраны меню */
     .screen {
       position: fixed;
       inset: 0;
@@ -70,10 +74,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: calc(env(safe-area-inset-top, 16px) + 12px) 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
-      backdrop-filter: blur(4px);
-      background: linear-gradient(180deg, rgba(6, 6, 14, 0.78) 0%, rgba(10, 8, 24, 0.55) 50%, rgba(6, 6, 14, 0.9) 100%);
-      animation: fadeIn 0.25s ease-out;
+      padding: calc(env(safe-area-inset-top, 14px) + 10px) 18px calc(env(safe-area-inset-bottom, 14px) + 14px);
+      backdrop-filter: blur(5px);
+      background: linear-gradient(180deg, rgba(6, 6, 14, 0.82) 0%, rgba(10, 8, 24, 0.6) 50%, rgba(6, 6, 14, 0.92) 100%);
+      animation: fadeIn 0.22s ease-out;
     }
 
     .screen.active {
@@ -85,27 +89,26 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* Заголовки в стиле Киберпанк */
     .cyber-header {
       text-align: center;
-      margin-top: 10px;
+      margin-top: 4px;
     }
 
     .cyber-badge {
       display: inline-block;
       padding: 4px 12px;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--bg-dark);
       background: var(--neon-yellow);
       clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .cyber-title {
-      font-size: clamp(28px, 7vw, 42px);
+      font-size: clamp(26px, 6.5vw, 40px);
       font-weight: 900;
       letter-spacing: 3px;
       text-transform: uppercase;
@@ -118,39 +121,53 @@
     }
 
     .cyber-subtitle {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--neon-cyan);
-      letter-spacing: 3px;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
-      margin-top: 6px;
+      margin-top: 4px;
       opacity: 0.9;
     }
 
-    /* Кнопки меню */
+    .top-wallet-pill {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(252, 238, 10, 0.14);
+      border: 1px solid var(--neon-yellow);
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--neon-yellow);
+      box-shadow: 0 0 12px rgba(252, 238, 10, 0.2);
+    }
+
     .menu-buttons {
       width: 100%;
       max-width: 360px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 11px;
       margin: auto 0;
     }
 
     .cyber-btn {
       position: relative;
       width: 100%;
-      padding: 16px 22px;
-      font-size: 17px;
+      padding: 14px 20px;
+      font-size: 16px;
       font-weight: 800;
-      letter-spacing: 2px;
+      letter-spacing: 1.8px;
       text-transform: uppercase;
       color: var(--text-main);
       background: var(--panel-bg);
       border: 1px solid var(--neon-cyan);
-      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
-      box-shadow: 0 0 15px rgba(0, 243, 255, 0.18), inset 0 0 12px rgba(0, 243, 255, 0.08);
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      box-shadow: 0 0 14px rgba(0, 243, 255, 0.16), inset 0 0 12px rgba(0, 243, 255, 0.08);
       cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      transition: transform 0.1s ease, background 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -168,27 +185,36 @@
     }
 
     .cyber-btn.primary {
-      background: linear-gradient(90deg, var(--neon-pink) 0%, #b800ff 100%);
+      background: linear-gradient(90deg, var(--neon-pink) 0%, var(--neon-purple) 100%);
       border-color: var(--neon-yellow);
       color: #fff;
-      font-size: 20px;
-      padding: 19px 24px;
-      box-shadow: 0 0 24px rgba(255, 0, 85, 0.55);
+      font-size: 19px;
+      padding: 17px 22px;
+      box-shadow: 0 0 24px rgba(255, 0, 85, 0.5);
     }
 
     .cyber-btn.primary::after {
       content: "▶";
       color: var(--neon-yellow);
-      font-size: 16px;
+      font-size: 15px;
     }
 
-    /* Выбранный герой в главном меню */
+    .cyber-btn.gold-btn {
+      border-color: var(--neon-yellow);
+      box-shadow: 0 0 15px rgba(252, 238, 10, 0.22);
+    }
+
+    .cyber-btn.gold-btn::after {
+      content: "⚡";
+      color: var(--neon-yellow);
+    }
+
     .current-hero-pill {
       background: rgba(0, 243, 255, 0.1);
       border: 1px solid rgba(0, 243, 255, 0.35);
-      padding: 8px 16px;
+      padding: 7px 14px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 12px;
       letter-spacing: 1px;
       text-align: center;
     }
@@ -198,48 +224,111 @@
       font-weight: 700;
     }
 
+    /* Магазин постоянной прокачки */
+    .shop-list {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin: auto 0;
+    }
+
+    .shop-item {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 243, 255, 0.35);
+      padding: 10px 14px;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .shop-info {
+      flex: 1;
+    }
+
+    .shop-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+    }
+
+    .shop-desc {
+      font-size: 11px;
+      color: #b4c6db;
+      margin-top: 2px;
+    }
+
+    .shop-lvl {
+      font-size: 11px;
+      color: var(--neon-yellow);
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    .shop-buy-btn {
+      background: rgba(252, 238, 10, 0.16);
+      border: 1px solid var(--neon-yellow);
+      color: var(--neon-yellow);
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      min-width: 92px;
+      text-align: center;
+    }
+
+    .shop-buy-btn:disabled {
+      opacity: 0.4;
+      border-color: #555;
+      color: #888;
+      background: rgba(255, 255, 255, 0.05);
+      cursor: default;
+    }
+
     /* Карточки выбора персонажей */
     .char-grid {
       width: 100%;
       max-width: 400px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       margin: auto 0;
     }
 
     .char-card {
       background: var(--panel-bg);
       border: 2px solid rgba(255, 255, 255, 0.15);
-      padding: 16px;
-      clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+      padding: 14px;
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
     }
 
     .char-card.selected {
       border-color: var(--neon-cyan);
-      box-shadow: 0 0 22px rgba(0, 243, 255, 0.35), inset 0 0 18px rgba(0, 243, 255, 0.12);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.35), inset 0 0 15px rgba(0, 243, 255, 0.12);
     }
 
     .char-card.samurai.selected {
       border-color: var(--neon-pink);
-      box-shadow: 0 0 22px rgba(255, 0, 85, 0.4), inset 0 0 18px rgba(255, 0, 85, 0.15);
+      box-shadow: 0 0 20px rgba(255, 0, 85, 0.4), inset 0 0 15px rgba(255, 0, 85, 0.15);
     }
 
     .char-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .char-name {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
     .char-role {
@@ -251,17 +340,17 @@
     }
 
     .char-desc {
-      font-size: 13px;
+      font-size: 12px;
       color: #b4c6db;
-      margin-bottom: 12px;
-      line-height: 1.35;
+      margin-bottom: 10px;
+      line-height: 1.3;
     }
 
     .stat-row {
       display: flex;
       align-items: center;
-      margin-bottom: 6px;
-      font-size: 12px;
+      margin-bottom: 5px;
+      font-size: 11px;
     }
 
     .stat-label {
@@ -273,7 +362,7 @@
 
     .stat-bar-bg {
       flex: 1;
-      height: 7px;
+      height: 6px;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 2px;
       overflow: hidden;
@@ -290,7 +379,7 @@
       max-width: 380px;
       background: var(--panel-bg);
       border: 1px solid var(--neon-cyan);
-      padding: 18px;
+      padding: 16px;
       clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
       margin: auto 0;
     }
@@ -316,13 +405,13 @@
       align-items: center;
       padding: 12px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .toggle-btn {
       padding: 6px 14px;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12px;
       border: 1px solid var(--neon-cyan);
       background: rgba(0, 243, 255, 0.15);
       color: #fff;
@@ -351,16 +440,16 @@
     .hud-top {
       position: absolute;
       top: env(safe-area-inset-top, 10px);
-      left: 12px;
-      right: 12px;
+      left: 10px;
+      right: 10px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .xp-bar-container {
       width: 100%;
-      height: 12px;
+      height: 11px;
       background: rgba(6, 8, 18, 0.85);
       border: 1px solid var(--neon-cyan);
       border-radius: 3px;
@@ -380,23 +469,24 @@
       justify-content: space-between;
       align-items: center;
       font-weight: 800;
-      font-size: 14px;
+      font-size: 13px;
       text-shadow: 0 2px 4px #000;
+      gap: 4px;
     }
 
     .hud-pill {
-      background: rgba(8, 10, 22, 0.8);
+      background: rgba(8, 10, 22, 0.82);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 5px 10px;
+      padding: 4px 8px;
       border-radius: 4px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .hp-bar-wrap {
-      width: 120px;
-      height: 10px;
+      width: 90px;
+      height: 9px;
       background: rgba(255, 255, 255, 0.15);
       border: 1px solid var(--neon-pink);
       border-radius: 2px;
@@ -412,29 +502,77 @@
 
     .hud-menu-btn {
       pointer-events: auto;
-      background: rgba(12, 14, 28, 0.85);
+      background: rgba(12, 14, 28, 0.88);
       border: 1px solid var(--neon-cyan);
       color: var(--neon-cyan);
-      padding: 5px 10px;
-      font-size: 12px;
-      font-weight: 700;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
       cursor: pointer;
     }
 
-    /* Виртуальный джойстик строго по центру внизу */
+    /* Полоса здоровья БОССА */
+    #boss-hud {
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+      background: rgba(20, 4, 14, 0.88);
+      border: 1px solid var(--neon-pink);
+      padding: 6px 10px;
+      border-radius: 4px;
+      box-shadow: 0 0 16px rgba(255, 0, 85, 0.45);
+      animation: pulseAlert 1s infinite alternate;
+    }
+
+    #boss-hud.active {
+      display: flex;
+    }
+
+    @keyframes pulseAlert {
+      from { border-color: var(--neon-pink); }
+      to { border-color: var(--neon-yellow); }
+    }
+
+    .boss-hud-title {
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--neon-yellow);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .boss-bar-bg {
+      width: 100%;
+      height: 9px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #boss-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-pink), var(--neon-yellow));
+      transition: width 0.1s linear;
+    }
+
+    /* Виртуальный джойстик по центру с защитой от свайпа вниз */
     #joystick-zone {
       position: absolute;
-      bottom: calc(env(safe-area-inset-bottom, 16px) + 28px);
+      bottom: calc(env(safe-area-inset-bottom, 20px) + 36px);
       left: 50%;
       transform: translateX(-50%);
-      width: 130px;
-      height: 130px;
+      width: 132px;
+      height: 132px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(0, 243, 255, 0.12) 0%, rgba(6, 8, 20, 0.55) 100%);
-      border: 2px solid rgba(0, 243, 255, 0.45);
-      box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 15px rgba(0, 243, 255, 0.15);
+      background: radial-gradient(circle, rgba(0, 243, 255, 0.14) 0%, rgba(6, 8, 20, 0.6) 100%);
+      border: 2px solid rgba(0, 243, 255, 0.5);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.22), inset 0 0 15px rgba(0, 243, 255, 0.15);
       pointer-events: auto;
       touch-action: none;
+      overscroll-behavior: none;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -443,10 +581,10 @@
     #joystick-zone::before {
       content: "";
       position: absolute;
-      width: 84%;
-      height: 84%;
+      width: 82%;
+      height: 82%;
       border-radius: 50%;
-      border: 1px dashed rgba(0, 243, 255, 0.3);
+      border: 1px dashed rgba(0, 243, 255, 0.32);
       pointer-events: none;
     }
 
@@ -459,10 +597,9 @@
       border: 2px solid #fff;
       pointer-events: none;
       transform: translate(0px, 0px);
-      transition: transform 0.04s linear;
     }
 
-    /* Модальные окна (Level Up / Game Over) */
+    /* Модальные окна (Level Up / Сундук Босса / Game Over) */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -471,7 +608,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 18px;
       background: rgba(4, 5, 12, 0.88);
       backdrop-filter: blur(8px);
     }
@@ -485,43 +622,42 @@
       max-width: 380px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-top: 18px;
+      gap: 11px;
+      margin-top: 14px;
     }
 
     .buff-card {
-      background: linear-gradient(135deg, rgba(16, 22, 42, 0.95), rgba(10, 12, 24, 0.95));
+      background: linear-gradient(135deg, rgba(16, 22, 42, 0.96), rgba(10, 12, 24, 0.96));
       border: 1px solid var(--neon-yellow);
-      padding: 14px 16px;
+      padding: 13px 15px;
       clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 13px;
       box-shadow: 0 0 16px rgba(252, 238, 10, 0.2);
-      transition: transform 0.12s ease, border-color 0.12s ease;
+      transition: transform 0.1s ease;
     }
 
     .buff-card:active {
       transform: scale(0.97);
-      border-color: var(--neon-cyan);
     }
 
     .buff-icon {
-      width: 46px;
-      height: 46px;
+      width: 44px;
+      height: 44px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 22px;
       background: rgba(252, 238, 10, 0.12);
       border: 1px solid var(--neon-yellow);
       border-radius: 6px;
     }
 
     .buff-info h4 {
-      font-size: 16px;
+      font-size: 15px;
       color: var(--neon-yellow);
       text-transform: uppercase;
       margin-bottom: 3px;
@@ -533,7 +669,6 @@
       line-height: 1.3;
     }
 
-    /* Всплывающий урон */
     #floating-texts {
       position: fixed;
       inset: 0;
@@ -570,11 +705,13 @@
     <div class="cyber-header">
       <div class="cyber-badge" id="tg-user-greeting">SYSTEM ONLINE // NEO-TOKYO</div>
       <h1 class="cyber-title">CYBER<br/>SURVIVOR</h1>
-      <div class="cyber-subtitle">Протокол выживания 2099</div>
+      <div class="cyber-subtitle">Протокол выживания 2.0</div>
+      <div class="top-wallet-pill">🪙 Кредиты: <span id="menu-coins">0</span></div>
     </div>
 
     <div class="menu-buttons">
       <button class="cyber-btn primary" id="btn-play">ИГРАТЬ</button>
+      <button class="cyber-btn gold-btn" id="btn-shop">Импланты (Прокачка)</button>
       <button class="cyber-btn" id="btn-chars">Персонажи</button>
       <button class="cyber-btn" id="btn-leaderboard">Таблица лидеров</button>
       <button class="cyber-btn" id="btn-settings">Настройки</button>
@@ -582,6 +719,21 @@
 
     <div class="current-hero-pill">
       Активный агент: <span id="menu-selected-hero">Кибер-самурай</span>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: МАГАЗИН ПОСТОЯННОЙ ПРОКАЧКИ -->
+  <div id="screen-shop" class="screen">
+    <div class="cyber-header">
+      <div class="cyber-badge">CYBERWARE CLINIC</div>
+      <h2 class="cyber-title" style="font-size: 25px;">ИМПЛАНТЫ</h2>
+      <div class="top-wallet-pill">🪙 Баланс: <span id="shop-coins">0</span></div>
+    </div>
+
+    <div class="shop-list" id="shop-items-container"></div>
+
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn" id="btn-shop-back">Назад в меню</button>
     </div>
   </div>
 
@@ -593,13 +745,12 @@
     </div>
 
     <div class="char-grid">
-      <!-- Кибер-самурай -->
       <div class="char-card samurai selected" data-hero="samurai">
         <div class="char-card-header">
           <span class="char-name" style="color: var(--neon-pink);">Кибер-самурай</span>
           <span class="char-role" style="background: rgba(255,0,85,0.2); color: var(--neon-pink);">Штурмовик</span>
         </div>
-        <p class="char-desc">Экзоскелет «Ронин-IX». Выпускает мощные плазменные дуги с повышенным базовым уроном и пробитием.</p>
+        <p class="char-desc">Экзоскелет «Ронин-IX». Выпускает широкие плазменные дуги с повышенным базовым уроном и пробитием.</p>
         <div class="stat-row">
           <span class="stat-label">Урон (+40%)</span>
           <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 92%; background: var(--neon-pink);"></div></div>
@@ -614,7 +765,6 @@
         </div>
       </div>
 
-      <!-- Уличный хакер -->
       <div class="char-card hacker" data-hero="hacker">
         <div class="char-card-header">
           <span class="char-name" style="color: var(--neon-cyan);">Уличный хакер</span>
@@ -665,7 +815,7 @@
 
     <div class="panel-box">
       <div class="setting-row">
-        <span>Синтезатор звука (SFX)</span>
+        <span>Мягкий синтезатор звука (SFX)</span>
         <button class="toggle-btn" id="toggle-sound">ВКЛ</button>
       </div>
       <div class="setting-row">
@@ -673,7 +823,7 @@
         <button class="toggle-btn" id="toggle-haptics">ВКЛ</button>
       </div>
       <div class="setting-row">
-        <span>3D-частицы и свечение</span>
+        <span>3D-частицы и всплывающий урон</span>
         <button class="toggle-btn" id="toggle-particles">ВЫСОКОЕ</button>
       </div>
     </div>
@@ -691,16 +841,30 @@
       </div>
       <div class="hud-stats-row">
         <div class="hud-pill">
-          <span style="color: var(--neon-yellow);">УР. <span id="hud-level">1</span></span>
+          <span style="color: var(--neon-yellow);">УР.<span id="hud-level">1</span></span>
           <div class="hp-bar-wrap"><div id="hp-bar-fill"></div></div>
         </div>
         <div class="hud-pill" style="color: var(--neon-cyan);">
           ⏱ <span id="hud-time">00:00</span>
         </div>
+        <div class="hud-pill" style="color: var(--neon-yellow);">
+          🪙 <span id="hud-coins">0</span>
+        </div>
         <div class="hud-pill" style="color: var(--neon-pink);">
           ☠ <span id="hud-kills">0</span>
         </div>
         <button class="hud-menu-btn" id="btn-hud-exit">МЕНЮ</button>
+      </div>
+
+      <!-- Полоса HP Босса волны -->
+      <div id="boss-hud">
+        <div class="boss-hud-title">
+          <span>⚠️ КИБЕР-БОСС СЕКТОРА: «АРХОНТ»</span>
+          <span id="boss-hp-text">100%</span>
+        </div>
+        <div class="boss-bar-bg">
+          <div id="boss-bar-fill"></div>
+        </div>
       </div>
     </div>
 
@@ -720,35 +884,59 @@
     <div class="buff-cards" id="buff-choices"></div>
   </div>
 
+  <!-- МОДАЛЬНОЕ ОКНО: КИБЕР-СУНДУК БОССА -->
+  <div id="modal-chest" class="modal-overlay">
+    <div class="cyber-header">
+      <div class="cyber-badge" style="background: var(--neon-green); color: #000;">BOSS TROPHY UNLOCKED</div>
+      <h2 class="cyber-title" style="font-size: 28px;">КИБЕР-СУНДУК!</h2>
+      <div class="cyber-subtitle">Эволюция боевого модуля</div>
+    </div>
+
+    <div class="panel-box" style="margin: 18px 0; text-align: center; border-color: var(--neon-yellow);">
+      <div style="font-size: 42px; margin-bottom: 8px;">📦✨</div>
+      <h3 id="chest-reward-title" style="color: var(--neon-yellow); font-size: 19px; text-transform: uppercase; margin-bottom: 6px;">ГИПЕР-ЯДРО</h3>
+      <p id="chest-reward-desc" style="color: #d0e4f7; font-size: 13px; margin-bottom: 12px; line-height: 1.4;"></p>
+      <p style="color: var(--neon-green); font-weight: 800; font-size: 15px;">+ <span id="chest-coins-bonus">50</span> 🪙 Кибер-кредитов</p>
+    </div>
+
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn primary" id="btn-chest-claim">ЗАБРАТЬ МОДУЛЬ</button>
+    </div>
+  </div>
+
   <!-- МОДАЛЬНОЕ ОКНО: КОНЕЦ ИГРЫ -->
   <div id="modal-gameover" class="modal-overlay">
     <div class="cyber-header">
       <div class="cyber-badge" style="background: var(--neon-pink); color: #fff;">CRITICAL SYSTEM FAILURE</div>
-      <h2 class="cyber-title" style="font-size: 32px;">СВЯЗЬ ПРЕРВАНА</h2>
+      <h2 class="cyber-title" style="font-size: 30px;">СВЯЗЬ ПРЕРВАНА</h2>
     </div>
 
-    <div class="panel-box" style="margin: 22px 0; text-align: center;">
-      <p style="font-size: 14px; color: #9ab0c7; margin-bottom: 10px;">ИТОГИ ОПЕРАЦИИ:</p>
-      <p style="font-size: 20px; font-weight: 800; color: var(--neon-cyan); margin-bottom: 6px;">
+    <div class="panel-box" style="margin: 18px 0; text-align: center;">
+      <p style="font-size: 13px; color: #9ab0c7; margin-bottom: 10px;">ИТОГИ ОПЕРАЦИИ:</p>
+      <p style="font-size: 18px; font-weight: 800; color: var(--neon-cyan); margin-bottom: 5px;">
         Время: <span id="go-time">00:00</span>
       </p>
-      <p style="font-size: 20px; font-weight: 800; color: var(--neon-pink); margin-bottom: 6px;">
-        Уничтожено дронов: <span id="go-kills">0</span>
+      <p style="font-size: 18px; font-weight: 800; color: var(--neon-pink); margin-bottom: 5px;">
+        Уничтожено врагов: <span id="go-kills">0</span>
       </p>
-      <p style="font-size: 16px; font-weight: 700; color: var(--neon-yellow);">
+      <p style="font-size: 18px; font-weight: 800; color: var(--neon-yellow); margin-bottom: 5px;">
+        Добыто кредитов за бой: +<span id="go-coins">0</span> 🪙
+      </p>
+      <p style="font-size: 15px; font-weight: 700; color: var(--neon-green);">
         Достигнут уровень: <span id="go-level">1</span>
       </p>
     </div>
 
     <div class="menu-buttons" style="margin: 0;">
       <button class="cyber-btn primary" id="btn-restart">ПЕРЕЗАПУСК</button>
+      <button class="cyber-btn gold-btn" id="btn-go-shop">В клинику имплантов</button>
       <button class="cyber-btn" id="btn-go-menu">В главное меню</button>
     </div>
   </div>
 
   <script>
     /****************************************************************
-     * 1. TELEGRAM MINI APP API & АУДИО-СИНТЕЗАТОР
+     * 1. TELEGRAM MINI APP API, ЗАЩИТА ОТ СВАЙПА ВНИЗ & СОХРАНЕНИЯ
      ****************************************************************/
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     let tgUsername = "Кибер-Странник";
@@ -756,6 +944,13 @@
     if (tg) {
       tg.ready();
       tg.expand();
+      // Официальное отключение сворачивания приложения вертикальным свайпом вниз (Bot API 7.7+)
+      if (typeof tg.disableVerticalSwipes === 'function') {
+        try { tg.disableVerticalSwipes(); } catch (e) {}
+      }
+      if (typeof tg.lockOrientation === 'function') {
+        try { tg.lockOrientation(); } catch (e) {}
+      }
       try {
         tg.setHeaderColor('#06060c');
         tg.setBackgroundColor('#06060c');
@@ -766,12 +961,72 @@
     }
     document.getElementById('tg-user-greeting').textContent = `AGENT: ${tgUsername.toUpperCase()}`;
 
+    // Глобальная блокировка нативного pull-to-refresh / swipe-to-close браузера на мобильных экранах
+    document.addEventListener('touchmove', (e) => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    // Система сохранения монет и постоянной прокачки (localStorage + Telegram CloudStorage)
+    const STORAGE_KEY = 'cyber_survivor_save_v2';
+    const SaveData = {
+      coins: 0,
+      bestScore: 0,
+      upgrades: {
+        dmg: 0,
+        hp: 0,
+        speed: 0,
+        magnet: 0,
+        greed: 0
+      }
+    };
+
+    function loadProgress() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          SaveData.coins = parsed.coins || 0;
+          SaveData.bestScore = parsed.bestScore || 0;
+          if (parsed.upgrades) Object.assign(SaveData.upgrades, parsed.upgrades);
+        }
+      } catch (e) {}
+
+      // Дополнительная синхронизация с Telegram CloudStorage, если доступно
+      if (tg && tg.CloudStorage) {
+        try {
+          tg.CloudStorage.getItem(STORAGE_KEY, (err, val) => {
+            if (!err && val) {
+              const cloudParsed = JSON.parse(val);
+              if ((cloudParsed.coins || 0) > SaveData.coins) {
+                Object.assign(SaveData, cloudParsed);
+                updateMenuWalletUI();
+              }
+            }
+          });
+        } catch (e) {}
+      }
+      updateMenuWalletUI();
+    }
+
+    function saveProgress() {
+      const str = JSON.stringify(SaveData);
+      try { localStorage.setItem(STORAGE_KEY, str); } catch (e) {}
+      if (tg && tg.CloudStorage) {
+        try { tg.CloudStorage.setItem(STORAGE_KEY, str); } catch (e) {}
+      }
+      updateMenuWalletUI();
+    }
+
+    function updateMenuWalletUI() {
+      document.getElementById('menu-coins').textContent = SaveData.coins;
+      document.getElementById('shop-coins').textContent = SaveData.coins;
+    }
+
     const AppConfig = {
       sound: true,
       haptics: true,
       highParticles: true,
-      selectedHero: 'samurai',
-      bestScore: parseInt(localStorage.getItem('cyber_survivor_best') || '0', 10)
+      selectedHero: 'samurai'
     };
 
     function triggerHaptic(type = 'light') {
@@ -785,7 +1040,9 @@
       } catch (e) {}
     }
 
-    // Процедурный Web Audio синтезатор (без внешних файлов)
+    /****************************************************************
+     * 2. МЯГКИЙ WEB AUDIO СИНТЕЗАТОР (БЕЗ РЕЗКИХ ЗВУКОВ)
+     ****************************************************************/
     const AudioEngine = {
       ctx: null,
       init() {
@@ -805,47 +1062,77 @@
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.connect(gain);
+
+        // Низкочастотный фильтр сглаживает резкие гармоники
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(420, now);
+
+        osc.connect(filter);
+        filter.connect(gain);
         gain.connect(this.ctx.destination);
 
         if (type === 'shoot') {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(520, now);
-          osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
-          gain.gain.setValueAtTime(0.06, now);
-          gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+          // Мягкий глухой футуристический импульс («пух») вместо резкой пилы
+          osc.type = 'sine';
+          const jitter = (Math.random() - 0.5) * 25;
+          osc.frequency.setValueAtTime(210 + jitter, now);
+          osc.frequency.exponentialRampToValueAtTime(85, now + 0.055);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.022, now + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.055);
           osc.start(now);
-          osc.stop(now + 0.08);
+          osc.stop(now + 0.06);
         } else if (type === 'xp') {
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(660, now);
-          osc.frequency.exponentialRampToValueAtTime(1180, now + 0.07);
-          gain.gain.setValueAtTime(0.05, now);
-          gain.gain.linearRampToValueAtTime(0.001, now + 0.07);
+          filter.frequency.setValueAtTime(900, now);
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.06);
+          gain.gain.setValueAtTime(0.018, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.06);
           osc.start(now);
-          osc.stop(now + 0.07);
-        } else if (type === 'levelup') {
+          osc.stop(now + 0.06);
+        } else if (type === 'coin') {
           osc.type = 'triangle';
+          filter.frequency.setValueAtTime(1200, now);
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.setValueAtTime(1175, now + 0.04);
+          gain.gain.setValueAtTime(0.025, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === 'levelup' || type === 'chest') {
+          osc.type = 'triangle';
+          filter.frequency.setValueAtTime(1100, now);
           osc.frequency.setValueAtTime(330, now);
           osc.frequency.setValueAtTime(440, now + 0.09);
           osc.frequency.setValueAtTime(660, now + 0.18);
-          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.setValueAtTime(0.06, now);
           gain.gain.linearRampToValueAtTime(0.001, now + 0.35);
           osc.start(now);
           osc.stop(now + 0.35);
-        } else if (type === 'click') {
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(800, now);
-          gain.gain.setValueAtTime(0.04, now);
-          gain.gain.linearRampToValueAtTime(0.001, now + 0.04);
+        } else if (type === 'boss') {
+          osc.type = 'sawtooth';
+          filter.frequency.setValueAtTime(260, now);
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.linearRampToValueAtTime(75, now + 0.45);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.45);
           osc.start(now);
-          osc.stop(now + 0.04);
+          osc.stop(now + 0.45);
+        } else if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(480, now);
+          gain.gain.setValueAtTime(0.025, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.035);
+          osc.start(now);
+          osc.stop(now + 0.035);
         }
       }
     };
 
     /****************************************************************
-     * 2. КОНФИГУРАЦИЯ ГЕРОЕВ И БАФОВ
+     * 3. КОНФИГУРАЦИЯ ГЕРОЕВ, МАГАЗИНА И 12 БАФФОВ УРОВНЯ
      ****************************************************************/
     const HEROES = {
       samurai: {
@@ -855,8 +1142,8 @@
         baseHp: 130,
         baseSpeed: 6.4,
         baseDamage: 34,
-        fireRate: 0.55,
-        projectileSpeed: 20,
+        fireRate: 0.52,
+        projectileSpeed: 21,
         projectileScale: 1.35,
         magnetRadius: 4.5
       },
@@ -867,13 +1154,22 @@
         baseHp: 100,
         baseSpeed: 8.8,
         baseDamage: 22,
-        fireRate: 0.32,
+        fireRate: 0.31,
         projectileSpeed: 26,
         projectileScale: 0.95,
         magnetRadius: 6.5
       }
     };
 
+    const SHOP_CONFIG = [
+      { key: 'dmg', title: 'Силовой реактор', desc: '+12% к базовому урону оружия', baseCost: 25, maxLvl: 10 },
+      { key: 'hp', title: 'Титановый каркас', desc: '+25 к максимальному запасу HP', baseCost: 20, maxLvl: 10 },
+      { key: 'speed', title: 'Серво-бустеры', desc: '+6% к скорости передвижения', baseCost: 20, maxLvl: 8 },
+      { key: 'magnet', title: 'Грави-антенна', desc: '+20% к радиусу сбора опыта и монет', baseCost: 15, maxLvl: 8 },
+      { key: 'greed', title: 'Крипто-майнер', desc: '+20% к ценности находимых монет', baseCost: 30, maxLvl: 10 }
+    ];
+
+    // Расширенный пул из 12 баффов (включая 4 новых активных модификатора)
     const BUFF_POOL = [
       {
         id: 'dmg',
@@ -901,7 +1197,35 @@
         icon: '🛰️',
         title: 'Орбитальный клинок',
         desc: 'Добавляет вращающийся вокруг героя защитный кибер-дрон.',
-        apply: (p) => { addOrbitalDrone(); }
+        apply: () => { addOrbitalDrone(); }
+      },
+      {
+        id: 'emp_nova',
+        icon: '🌐',
+        title: 'ЭМИ-Нова (Волна)',
+        desc: 'Каждые 3.5 сек. испускает 3D ударную волну, наносящую урон всем врагам вокруг.',
+        apply: (p) => { p.empLevel += 1; }
+      },
+      {
+        id: 'cryo',
+        icon: '❄️',
+        title: 'Крио-протокол',
+        desc: 'Выстрелы замораживают врагов, замедляя их скорость на 40%, и наносят +15% урона.',
+        apply: (p) => { p.cryoShot = true; p.damage *= 1.15; }
+      },
+      {
+        id: 'ricochet',
+        icon: '🪃',
+        title: 'Плазменный рикошет',
+        desc: 'Снаряды при попадании автоматически отскакивают в соседнего врага (+1 отскок).',
+        apply: (p) => { p.ricochet += 1; }
+      },
+      {
+        id: 'vamp_crit',
+        icon: '🦇',
+        title: 'Вампиризм + Крит',
+        desc: '+25% шанс двойного крит. урона. Убийства врагов восстанавливают HP герою.',
+        apply: (p) => { p.critChance = Math.min(0.75, p.critChance + 0.25); p.lifesteal += 1.5; }
       },
       {
         id: 'speed',
@@ -914,17 +1238,17 @@
         id: 'magnet',
         icon: '🧲',
         title: 'Грави-имплант',
-        desc: '+50% к радиусу притяжения кристаллов и +20% к получаемому опыту.',
+        desc: '+50% к радиусу притяжения кристаллов и монет, +20% к опыту.',
         apply: (p) => { p.magnetRadius *= 1.5; p.xpMultiplier *= 1.2; }
       },
       {
         id: 'heal',
         icon: '❤️‍🩹',
         title: 'Нано-регенерация',
-        desc: 'Восстанавливает 60% HP и увеличивает макс. здоровье на +35.',
+        desc: 'Восстанавливает 70% HP и увеличивает макс. здоровье на +40.',
         apply: (p) => {
-          p.maxHp += 35;
-          p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.6);
+          p.maxHp += 40;
+          p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.7);
           updateHudUI();
         }
       },
@@ -932,13 +1256,13 @@
         id: 'pierce',
         icon: '💥',
         title: 'Сверхпроводник',
-        desc: 'Снаряды пробивают на +1 врага больше и летят быстрее.',
-        apply: (p) => { p.pierce += 1; p.projectileSpeed *= 1.15; }
+        desc: 'Снаряды пробивают на +1 врага больше и летят на 20% быстрее.',
+        apply: (p) => { p.pierce += 1; p.projectileSpeed *= 1.2; }
       }
     ];
 
     /****************************************************************
-     * 3. THREE.JS 3D-СЦЕНА, ОКРУЖЕНИЕ И КАМЕРА
+     * 4. THREE.JS 3D-СЦЕНА, ОКРУЖЕНИЕ И КАМЕРА
      ****************************************************************/
     const canvas = document.getElementById('game-canvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -947,23 +1271,21 @@
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05050c);
-    scene.fog = new THREE.FogExp2(0x05050c, 0.028);
+    scene.fog = new THREE.FogExp2(0x05050c, 0.026);
 
-    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 120);
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 130);
 
-    // Освещение
-    const ambientLight = new THREE.AmbientLight(0x303860, 1.3);
+    const ambientLight = new THREE.AmbientLight(0x303860, 1.35);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
     dirLight.position.set(12, 26, 14);
     scene.add(dirLight);
 
-    const playerLight = new THREE.PointLight(0xff0055, 2.2, 22);
+    const playerLight = new THREE.PointLight(0xff0055, 2.2, 24);
     playerLight.position.set(0, 3, 0);
     scene.add(playerLight);
 
-    // Создание процедурной неоновой сетки пола
     function createCyberFloorTexture() {
       const c = document.createElement('canvas');
       c.width = 256;
@@ -991,19 +1313,15 @@
     }
 
     const floorTexture = createCyberFloorTexture();
-    const floorGeo = new THREE.PlaneGeometry(240, 240);
-    const floorMat = new THREE.MeshStandardMaterial({
-      map: floorTexture,
-      roughness: 0.8,
-      metalness: 0.2
-    });
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    const floorMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(240, 240),
+      new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.8, metalness: 0.2 })
+    );
     floorMesh.rotation.x = -Math.PI / 2;
     scene.add(floorMesh);
 
-    // 3D-декорации вокруг (Неоновые монолиты, кибер-колонны и голограммы)
     const propsList = [];
-    const WRAP_SIZE = 76; // Размер тороидального мира вокруг игрока
+    const WRAP_SIZE = 76;
 
     function createWorldDecorations() {
       const pillarGeo = new THREE.BoxGeometry(1.3, 4.5, 1.3);
@@ -1018,7 +1336,6 @@
         const neonMat = new THREE.MeshBasicMaterial({ color: neonColor });
 
         if (i % 3 === 0) {
-          // Кибер-монолит с неоновыми кольцами
           const base = new THREE.Mesh(pillarGeo, pillarMat);
           base.position.y = 2.25;
           group.add(base);
@@ -1031,9 +1348,7 @@
           band2.position.y = 1.4;
           group.add(band2);
         } else {
-          // Энергетический узел с парящим кристаллом
-          const pedGeo = new THREE.CylinderGeometry(0.8, 1.1, 0.6, 6);
-          const ped = new THREE.Mesh(pedGeo, pillarMat);
+          const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 0.6, 6), pillarMat);
           ped.position.y = 0.3;
           group.add(ped);
 
@@ -1043,7 +1358,6 @@
           group.userData.holo = holo;
         }
 
-        // Размещаем вокруг центра, избегая спавна прямо на старте (0,0)
         let px = (Math.random() - 0.5) * WRAP_SIZE;
         let pz = (Math.random() - 0.5) * WRAP_SIZE;
         if (Math.hypot(px, pz) < 6) px += 8;
@@ -1056,12 +1370,11 @@
     createWorldDecorations();
 
     /****************************************************************
-     * 4. СОЗДАНИЕ 3D-МОДЕЛИ ГЕРОЯ (В ЦЕНТРЕ ЭКРАНА)
+     * 5. 3D-МОДЕЛЬ ГЕРОЯ
      ****************************************************************/
     const playerGroup = new THREE.Group();
     scene.add(playerGroup);
-
-    let playerBodyMat, playerNeonMat, playerWeaponMesh, playerAuraMesh;
+    let playerWeaponMesh = null;
 
     function buildPlayerMesh(heroKey) {
       while (playerGroup.children.length > 0) {
@@ -1070,22 +1383,19 @@
       const cfg = HEROES[heroKey];
       playerLight.color.setHex(cfg.color);
 
-      playerBodyMat = new THREE.MeshStandardMaterial({ color: 0x181c30, roughness: 0.3, metalness: 0.7 });
-      playerNeonMat = new THREE.MeshBasicMaterial({ color: cfg.color });
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x181c30, roughness: 0.3, metalness: 0.7 });
+      const neonMat = new THREE.MeshBasicMaterial({ color: cfg.color });
       const secNeonMat = new THREE.MeshBasicMaterial({ color: cfg.secondaryColor });
 
-      // Торс
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.15, 0.55), playerBodyMat);
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.15, 0.55), bodyMat);
       torso.position.y = 1.05;
       playerGroup.add(torso);
 
-      // Неоновый нагрудник
-      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.6), playerNeonMat);
+      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.6), neonMat);
       chest.position.set(0, 1.2, 0);
       playerGroup.add(chest);
 
-      // Голова + кибер-визор
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), playerBodyMat);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), bodyMat);
       head.position.y = 1.98;
       playerGroup.add(head);
 
@@ -1094,8 +1404,7 @@
       playerGroup.add(visor);
 
       if (heroKey === 'samurai') {
-        // Катана за спиной / в руке и кибер-наплечники
-        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.65), playerNeonMat);
+        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.65), neonMat);
         shoulderL.position.set(-0.62, 1.5, 0);
         const shoulderR = shoulderL.clone();
         shoulderR.position.x = 0.62;
@@ -1107,83 +1416,103 @@
         playerWeaponMesh = blade;
         playerGroup.add(blade);
       } else {
-        // Парящее голографическое кольцо хакера
-        const deck = new THREE.Mesh(
-          new THREE.TorusGeometry(0.75, 0.06, 8, 24),
-          playerNeonMat
-        );
+        const deck = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.06, 8, 24), neonMat);
         deck.rotation.x = Math.PI / 2;
         deck.position.y = 1.1;
         playerWeaponMesh = deck;
         playerGroup.add(deck);
       }
 
-      // Неоновое кольцо под ногами (индикатор центра)
-      const auraGeo = new THREE.RingGeometry(0.75, 0.92, 32);
-      playerAuraMesh = new THREE.Mesh(auraGeo, new THREE.MeshBasicMaterial({
-        color: cfg.color,
-        side: THREE.DoubleSide
-      }));
-      playerAuraMesh.rotation.x = -Math.PI / 2;
-      playerAuraMesh.position.y = 0.04;
-      playerGroup.add(playerAuraMesh);
+      const aura = new THREE.Mesh(
+        new THREE.RingGeometry(0.75, 0.92, 32),
+        new THREE.MeshBasicMaterial({ color: cfg.color, side: THREE.DoubleSide })
+      );
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = 0.04;
+      playerGroup.add(aura);
     }
 
     buildPlayerMesh(AppConfig.selectedHero);
 
     /****************************************************************
-     * 5. ИГРОВОЕ СОСТОЯНИЕ И СУЩНОСТИ
+     * 6. ИГРОВОЕ СОСТОЯНИЕ, БОССЫ, СУНДУКИ И МОНЕТЫ
      ****************************************************************/
     const GameState = {
-      mode: 'MENU', // 'MENU' | 'PLAYING' | 'PAUSED' | 'GAMEOVER'
+      mode: 'MENU',
       elapsedTime: 0,
       kills: 0,
+      runCoins: 0,
       spawnTimer: 0,
+      nextBossTime: 45, // Первый босс появляется на 45-й секунде
+      activeBoss: null,
       player: null,
       enemies: [],
       projectiles: [],
       xpGems: [],
+      coins: [],
+      chests: [],
+      shockwaves: [],
       particles: [],
       orbitals: []
     };
 
     function resetGameState() {
-      // Очистка старых 3D объектов со сцены
       GameState.enemies.forEach(e => scene.remove(e.mesh));
       GameState.projectiles.forEach(p => scene.remove(p.mesh));
       GameState.xpGems.forEach(g => scene.remove(g.mesh));
+      GameState.coins.forEach(c => scene.remove(c.mesh));
+      GameState.chests.forEach(ch => scene.remove(ch.mesh));
+      GameState.shockwaves.forEach(sw => scene.remove(sw.mesh));
       GameState.particles.forEach(pt => scene.remove(pt.mesh));
       GameState.orbitals.forEach(o => scene.remove(o.mesh));
 
       GameState.enemies = [];
       GameState.projectiles = [];
       GameState.xpGems = [];
+      GameState.coins = [];
+      GameState.chests = [];
+      GameState.shockwaves = [];
       GameState.particles = [];
       GameState.orbitals = [];
+      GameState.activeBoss = null;
+      document.getElementById('boss-hud').classList.remove('active');
 
       const cfg = HEROES[AppConfig.selectedHero];
+      const upg = SaveData.upgrades;
+
       buildPlayerMesh(AppConfig.selectedHero);
       playerGroup.position.set(0, 0, 0);
       playerGroup.rotation.set(0, 0, 0);
 
       GameState.elapsedTime = 0;
       GameState.kills = 0;
+      GameState.runCoins = 0;
       GameState.spawnTimer = 0;
+      GameState.nextBossTime = 45;
 
+      // Применяем постоянные улучшения из клиники имплантов
+      const maxHp = cfg.baseHp + upg.hp * 25;
       GameState.player = {
         x: 0,
         z: 0,
-        hp: cfg.baseHp,
-        maxHp: cfg.baseHp,
-        speed: cfg.baseSpeed,
-        damage: cfg.baseDamage,
+        hp: maxHp,
+        maxHp: maxHp,
+        speed: cfg.baseSpeed * (1 + upg.speed * 0.06),
+        damage: cfg.baseDamage * (1 + upg.dmg * 0.12),
         fireDelay: cfg.fireRate,
         fireCooldown: 0,
         projectileSpeed: cfg.projectileSpeed,
         projectileScale: cfg.projectileScale,
         projectilesCount: 1,
         pierce: 1,
-        magnetRadius: cfg.magnetRadius,
+        ricochet: 0,
+        cryoShot: false,
+        critChance: 0.05,
+        lifesteal: 0,
+        empLevel: 0,
+        empTimer: 0,
+        magnetRadius: cfg.magnetRadius * (1 + upg.magnet * 0.2),
+        coinMultiplier: 1 + upg.greed * 0.2,
         xpMultiplier: 1,
         level: 1,
         xp: 0,
@@ -1193,41 +1522,98 @@
       updateHudUI();
     }
 
-    // Добавление орбитального дрона
     function addOrbitalDrone() {
       const cfg = HEROES[AppConfig.selectedHero];
       const mesh = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.42, 0),
+        new THREE.OctahedronGeometry(0.44, 0),
         new THREE.MeshBasicMaterial({ color: cfg.secondaryColor })
       );
       scene.add(mesh);
       GameState.orbitals.push({
         mesh,
         angle: (GameState.orbitals.length * Math.PI) / 2,
-        radius: 3.1
+        radius: 3.2
       });
     }
 
-    // Спавн врагов со всех сторон вокруг игрока
+    // Спавн обычных врагов и БОССА волны
     const enemyGeometries = [
-      new THREE.OctahedronGeometry(0.75, 0), // Быстрый дрон
-      new THREE.BoxGeometry(1.05, 1.5, 1.05), // Штурмовой бот
-      new THREE.DodecahedronGeometry(1.3, 0)  // Тяжелый мех
+      new THREE.OctahedronGeometry(0.75, 0),
+      new THREE.BoxGeometry(1.05, 1.5, 1.05),
+      new THREE.DodecahedronGeometry(1.3, 0)
     ];
 
-    function spawnEnemy() {
+    function spawnEnemy(isBoss = false) {
       const p = GameState.player;
       const angle = Math.random() * Math.PI * 2;
-      const dist = 21 + Math.random() * 5;
+      const dist = isBoss ? 19 : (21 + Math.random() * 5);
       const ex = p.x + Math.cos(angle) * dist;
       const ez = p.z + Math.sin(angle) * dist;
 
-      // Рост сложности со временем
-      const difficulty = 1 + GameState.elapsedTime / 45;
+      const difficulty = 1 + GameState.elapsedTime / 42;
+
+      if (isBoss) {
+        // 3D модель Кибер-Босса с вращающимся кольцом
+        const group = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: 0x220818,
+          emissive: 0xff0055,
+          emissiveIntensity: 0.65,
+          roughness: 0.25,
+          metalness: 0.8
+        });
+
+        const core = new THREE.Mesh(new THREE.OctahedronGeometry(2.1, 1), bodyMat);
+        core.position.y = 2.2;
+        group.add(core);
+
+        const shieldRing = new THREE.Mesh(
+          new THREE.TorusGeometry(2.7, 0.14, 10, 32),
+          new THREE.MeshBasicMaterial({ color: 0xfcee0a })
+        );
+        shieldRing.rotation.x = Math.PI / 2;
+        shieldRing.position.y = 2.2;
+        group.add(shieldRing);
+
+        const visor = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 0.45, 1.6),
+          new THREE.MeshBasicMaterial({ color: 0x00f3ff })
+        );
+        visor.position.set(0, 2.5, 1.1);
+        group.add(visor);
+
+        group.position.set(ex, 0, ez);
+        scene.add(group);
+
+        const bossHp = Math.round(950 * difficulty);
+        const bossObj = {
+          mesh: group,
+          bodyMesh: core,
+          shieldRing,
+          x: ex,
+          z: ez,
+          hp: bossHp,
+          maxHp: bossHp,
+          speed: 2.65,
+          xpValue: 150,
+          radius: 2.1,
+          hitFlash: 0,
+          slowTimer: 0,
+          isBoss: true
+        };
+
+        GameState.enemies.push(bossObj);
+        GameState.activeBoss = bossObj;
+        document.getElementById('boss-hud').classList.add('active');
+        AudioEngine.play('boss');
+        triggerHaptic('warning');
+        return;
+      }
+
       const r = Math.random();
       let type = 0;
-      if (GameState.elapsedTime > 20 && r > 0.65) type = 1;
-      if (GameState.elapsedTime > 45 && r > 0.9) type = 2;
+      if (GameState.elapsedTime > 18 && r > 0.65) type = 1;
+      if (GameState.elapsedTime > 40 && r > 0.9) type = 2;
 
       let hp = 26 * difficulty;
       let speed = 3.7 + Math.random() * 0.8;
@@ -1259,7 +1645,6 @@
       body.position.y = 1.0 * scale;
       group.add(body);
 
-      // Светящееся ядро врага
       const eye = new THREE.Mesh(
         new THREE.BoxGeometry(0.55, 0.22, 0.55),
         new THREE.MeshBasicMaterial({ color: 0xffffff })
@@ -1273,6 +1658,7 @@
       GameState.enemies.push({
         mesh: group,
         bodyMesh: body,
+        baseEmissiveHex: color,
         x: ex,
         z: ez,
         hp,
@@ -1280,8 +1666,71 @@
         speed,
         xpValue,
         radius: 0.75 * scale,
-        hitFlash: 0
+        hitFlash: 0,
+        slowTimer: 0,
+        isBoss: false
       });
+    }
+
+    // Спавн 3D Кибер-сундука после смерти Босса
+    function spawnBossChest(x, z) {
+      const group = new THREE.Group();
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.95, 0.95),
+        new THREE.MeshStandardMaterial({ color: 0x221a08, emissive: 0xfcee0a, emissiveIntensity: 0.6, metalness: 0.8 })
+      );
+      box.position.y = 0.55;
+      group.add(box);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.1, 1.35, 24),
+        new THREE.MeshBasicMaterial({ color: 0x00ff88, side: THREE.DoubleSide })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.05;
+      group.add(ring);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      GameState.chests.push({ mesh: group, x, z });
+    }
+
+    // Спавн золотой монеты (Кибер-кредита)
+    const coinGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.1, 12);
+    const coinMat = new THREE.MeshBasicMaterial({ color: 0xfcee0a });
+
+    function spawnCoin(x, z, value = 1) {
+      const mesh = new THREE.Mesh(coinGeo, coinMat);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(x, 0.55, z);
+      scene.add(mesh);
+      GameState.coins.push({ mesh, x, z, value });
+    }
+
+    // Выпуск 3D ЭМИ-Новы вокруг героя
+    function triggerEmpNova() {
+      const p = GameState.player;
+      const maxRadius = 6.5 + p.empLevel * 1.8;
+      const mesh = new THREE.Mesh(
+        new THREE.RingGeometry(0.5, 0.85, 32),
+        new THREE.MeshBasicMaterial({ color: 0x00f3ff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(p.x, 0.15, p.z);
+      scene.add(mesh);
+
+      GameState.shockwaves.push({ mesh, scale: 1, maxScale: maxRadius });
+
+      // Урон и заморозка врагов в радиусе волны
+      const empDmg = p.damage * (0.9 + p.empLevel * 0.45);
+      for (const e of GameState.enemies) {
+        if (Math.hypot(e.x - p.x, e.z - p.z) <= maxRadius) {
+          e.hp -= empDmg;
+          e.hitFlash = 0.12;
+          e.slowTimer = 2.0;
+          showFloatingDamage(e.x, e.z, empDmg, '#00f3ff');
+        }
+      }
     }
 
     // Выстрел по ближайшему врагу
@@ -1289,7 +1738,6 @@
       const p = GameState.player;
       if (GameState.enemies.length === 0) return;
 
-      // Поиск ближайшего врага
       let nearest = null;
       let minDist = Infinity;
       for (const e of GameState.enemies) {
@@ -1299,7 +1747,7 @@
           nearest = e;
         }
       }
-      if (!nearest || minDist > 24) return;
+      if (!nearest || minDist > 25) return;
 
       const baseAngle = Math.atan2(nearest.z - p.z, nearest.x - p.x);
       const count = p.projectilesCount;
@@ -1314,8 +1762,8 @@
           ? new THREE.BoxGeometry(0.95 * p.projectileScale, 0.16, 0.45 * p.projectileScale)
           : new THREE.SphereGeometry(0.28 * p.projectileScale, 8, 8);
 
-        const mat = new THREE.MeshBasicMaterial({ color: cfg.secondaryColor });
-        const mesh = new THREE.Mesh(geo, mat);
+        const projColor = p.cryoShot ? 0x00f3ff : cfg.secondaryColor;
+        const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: projColor }));
         mesh.position.set(p.x, 1.15, p.z);
         mesh.rotation.y = -finalAngle;
         scene.add(mesh);
@@ -1326,9 +1774,11 @@
           z: p.z,
           vx: Math.cos(finalAngle) * p.projectileSpeed,
           vz: Math.sin(finalAngle) * p.projectileSpeed,
+          speed: p.projectileSpeed,
           damage: p.damage,
           pierce: p.pierce,
-          life: 1.4,
+          ricochet: p.ricochet,
+          life: 1.45,
           hitSet: new Set()
         });
       }
@@ -1336,7 +1786,6 @@
       AudioEngine.play('shoot');
     }
 
-    // Спавн кристалла опыта
     const gemGeo = new THREE.OctahedronGeometry(0.36, 0);
     const gemMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
 
@@ -1347,7 +1796,6 @@
       GameState.xpGems.push({ mesh, x, z, value });
     }
 
-    // 3D частицы при взрыве врагов
     const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
     function spawnExplosion(x, z, colorHex) {
       const count = AppConfig.highParticles ? 8 : 3;
@@ -1368,7 +1816,6 @@
       }
     }
 
-    // Всплывающие цифры урона (проекция 3D -> 2D)
     const floatingContainer = document.getElementById('floating-texts');
     function showFloatingDamage(worldX, worldZ, amount, color = '#fcee0a') {
       if (!AppConfig.highParticles) return;
@@ -1383,13 +1830,13 @@
       el.style.left = `${sx}px`;
       el.style.top = `${sy}px`;
       el.style.color = color;
-      el.textContent = Math.round(amount);
+      el.textContent = typeof amount === 'number' ? Math.round(amount) : amount;
       floatingContainer.appendChild(el);
       setTimeout(() => el.remove(), 650);
     }
 
     /****************************************************************
-     * 6. УПРАВЛЕНИЕ: ВИРТУАЛЬНЫЙ ДЖОЙСТИК ПО ЦЕНТРУ + КЛАВИАТУРА
+     * 7. ИСПРАВЛЕННЫЙ ДЖОЙСТИК (БЕЗ СВОРАЧИВАНИЯ ИГРЫ ПРИ БЕГЕ ВНИЗ)
      ****************************************************************/
     const joyZone = document.getElementById('joystick-zone');
     const joyKnob = document.getElementById('joystick-knob');
@@ -1397,11 +1844,11 @@
       joyX: 0,
       joyY: 0,
       active: false,
-      pointerId: null,
+      touchId: null,
       keys: {}
     };
 
-    function handleJoystickMove(clientX, clientY) {
+    function updateJoystickPosition(clientX, clientY) {
       const rect = joyZone.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
@@ -1423,32 +1870,66 @@
 
     function resetJoystick() {
       InputState.active = false;
-      InputState.pointerId = null;
+      InputState.touchId = null;
       InputState.joyX = 0;
       InputState.joyY = 0;
       joyKnob.style.transform = `translate(0px, 0px)`;
     }
 
-    joyZone.addEventListener('pointerdown', (e) => {
+    // Явная обработка Touch-событий с { passive: false } для 100% блокировки свайпа закрытия Telegram
+    joyZone.addEventListener('touchstart', (e) => {
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      AudioEngine.init();
+      const touch = e.changedTouches[0];
+      InputState.active = true;
+      InputState.touchId = touch.identifier;
+      updateJoystickPosition(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    joyZone.addEventListener('touchmove', (e) => {
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      if (!InputState.active) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === InputState.touchId) {
+          updateJoystickPosition(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+
+    joyZone.addEventListener('touchend', (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === InputState.touchId) {
+          resetJoystick();
+          break;
+        }
+      }
+    }, { passive: false });
+
+    joyZone.addEventListener('touchcancel', resetJoystick, { passive: false });
+
+    // Поддержка мыши для игры с ПК
+    let mouseJoyActive = false;
+    joyZone.addEventListener('mousedown', (e) => {
       e.preventDefault();
       AudioEngine.init();
+      mouseJoyActive = true;
       InputState.active = true;
-      InputState.pointerId = e.pointerId;
-      joyZone.setPointerCapture(e.pointerId);
-      handleJoystickMove(e.clientX, e.clientY);
+      updateJoystickPosition(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!mouseJoyActive) return;
+      updateJoystickPosition(e.clientX, e.clientY);
+    });
+    window.addEventListener('mouseup', () => {
+      if (mouseJoyActive) {
+        mouseJoyActive = false;
+        resetJoystick();
+      }
     });
 
-    joyZone.addEventListener('pointermove', (e) => {
-      if (!InputState.active || e.pointerId !== InputState.pointerId) return;
-      handleJoystickMove(e.clientX, e.clientY);
-    });
-
-    joyZone.addEventListener('pointerup', (e) => {
-      if (e.pointerId === InputState.pointerId) resetJoystick();
-    });
-    joyZone.addEventListener('pointercancel', resetJoystick);
-
-    // Поддержка WASD / Стрелок для тестирования с ПК
     window.addEventListener('keydown', (e) => { InputState.keys[e.code] = true; });
     window.addEventListener('keyup', (e) => { InputState.keys[e.code] = false; });
 
@@ -1470,7 +1951,7 @@
     }
 
     /****************************************************************
-     * 7. СИСТЕМА УРОВНЕЙ, БАФОВ И ОБНОВЛЕНИЯ HUD
+     * 8. HUD, НОВЫЙ УРОВЕНЬ, ОТКРЫТИЕ СУНДУКА И МАГАЗИН ИМПЛАНТОВ
      ****************************************************************/
     function updateHudUI() {
       const p = GameState.player;
@@ -1484,10 +1965,18 @@
 
       document.getElementById('hud-level').textContent = p.level;
       document.getElementById('hud-kills').textContent = GameState.kills;
+      document.getElementById('hud-coins').textContent = SaveData.coins;
 
       const mins = String(Math.floor(GameState.elapsedTime / 60)).padStart(2, '0');
       const secs = String(Math.floor(GameState.elapsedTime % 60)).padStart(2, '0');
       document.getElementById('hud-time').textContent = `${mins}:${secs}`;
+
+      if (GameState.activeBoss) {
+        const b = GameState.activeBoss;
+        const bPct = Math.max(0, Math.round((b.hp / b.maxHp) * 100));
+        document.getElementById('boss-bar-fill').style.width = `${bPct}%`;
+        document.getElementById('boss-hp-text').textContent = `${bPct}%`;
+      }
     }
 
     function addXp(amount) {
@@ -1510,7 +1999,6 @@
       triggerHaptic('success');
       AudioEngine.play('levelup');
 
-      // Выбираем 3 случайных неповторяющихся бафа
       const shuffled = [...BUFF_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
       const container = document.getElementById('buff-choices');
       container.innerHTML = '';
@@ -1539,24 +2027,113 @@
       document.getElementById('modal-levelup').classList.add('active');
     }
 
+    // Открытие Кибер-сундука Босса
+    function triggerChestModal() {
+      GameState.mode = 'PAUSED';
+      resetJoystick();
+      triggerHaptic('success');
+      AudioEngine.play('chest');
+
+      const p = GameState.player;
+      const bonusCoins = Math.round(45 * p.coinMultiplier);
+      SaveData.coins += bonusCoins;
+      GameState.runCoins += bonusCoins;
+      saveProgress();
+
+      const evolutions = [
+        {
+          title: 'ОМЕГА-КАТАНА // СВЕРХЗАРЯД',
+          desc: '+2 дополнительных снаряда, +40% к урону и мгновенное полное исцеление HP!',
+          apply: () => { p.projectilesCount += 2; p.damage *= 1.4; p.hp = p.maxHp; }
+        },
+        {
+          title: 'РОЙ СПУТНИКОВ «ВАЛЬКИРИЯ»',
+          desc: 'Призывает сразу 2 орбитальных дрона, усиливает ЭМИ-Нову и ускоряет стрельбу на +30%!',
+          apply: () => { addOrbitalDrone(); addOrbitalDrone(); p.empLevel += 1; p.fireDelay *= 0.72; }
+        },
+        {
+          title: 'КРИО-ШТОРМ // АБСОЛЮТНЫЙ НОЛЬ',
+          desc: 'Активирует заморозку, +2 рикошета снарядов и +35% к шансу критического урона!',
+          apply: () => { p.cryoShot = true; p.ricochet += 2; p.critChance = Math.min(0.85, p.critChance + 0.35); }
+        }
+      ];
+
+      const evo = evolutions[Math.floor(Math.random() * evolutions.length)];
+      evo.apply();
+
+      document.getElementById('chest-reward-title').textContent = evo.title;
+      document.getElementById('chest-reward-desc').textContent = evo.desc;
+      document.getElementById('chest-coins-bonus').textContent = bonusCoins;
+      document.getElementById('modal-chest').classList.add('active');
+      updateHudUI();
+    }
+
+    document.getElementById('btn-chest-claim').addEventListener('click', () => {
+      AudioEngine.play('click');
+      document.getElementById('modal-chest').classList.remove('active');
+      GameState.mode = 'PLAYING';
+    });
+
+    // Рендер магазина постоянной прокачки
+    function renderShop() {
+      updateMenuWalletUI();
+      const container = document.getElementById('shop-items-container');
+      container.innerHTML = '';
+
+      SHOP_CONFIG.forEach((item) => {
+        const currentLvl = SaveData.upgrades[item.key] || 0;
+        const cost = Math.round(item.baseCost * Math.pow(1.45, currentLvl));
+        const isMax = currentLvl >= item.maxLvl;
+        const canAfford = SaveData.coins >= cost && !isMax;
+
+        const row = document.createElement('div');
+        row.className = 'shop-item';
+        row.innerHTML = `
+          <div class="shop-info">
+            <div class="shop-title">${item.title}</div>
+            <div class="shop-desc">${item.desc}</div>
+            <div class="shop-lvl">Уровень: ${currentLvl} / ${item.maxLvl}</div>
+          </div>
+          <button class="shop-buy-btn" ${canAfford ? '' : 'disabled'}>
+            ${isMax ? 'МАКС.' : `🪙 ${cost}`}
+          </button>
+        `;
+
+        const btn = row.querySelector('.shop-buy-btn');
+        btn.addEventListener('click', () => {
+          if (SaveData.coins >= cost && currentLvl < item.maxLvl) {
+            SaveData.coins -= cost;
+            SaveData.upgrades[item.key] = currentLvl + 1;
+            AudioEngine.play('coin');
+            triggerHaptic('medium');
+            saveProgress();
+            renderShop();
+          }
+        });
+
+        container.appendChild(row);
+      });
+    }
+
     function triggerGameOver() {
       GameState.mode = 'GAMEOVER';
       resetJoystick();
       triggerHaptic('error');
 
-      if (GameState.kills > AppConfig.bestScore) {
-        AppConfig.bestScore = GameState.kills;
-        localStorage.setItem('cyber_survivor_best', String(AppConfig.bestScore));
+      if (GameState.kills > SaveData.bestScore) {
+        SaveData.bestScore = GameState.kills;
       }
+      saveProgress();
 
       document.getElementById('go-time').textContent = document.getElementById('hud-time').textContent;
       document.getElementById('go-kills').textContent = GameState.kills;
+      document.getElementById('go-coins').textContent = GameState.runCoins;
       document.getElementById('go-level').textContent = GameState.player.level;
       document.getElementById('modal-gameover').classList.add('active');
     }
 
     /****************************************************************
-     * 8. ГЛАВНЫЙ ИГРОВОЙ ЦИКЛ (ОБНОВЛЕНИЕ И 3D-РЕНДЕР)
+     * 9. ГЛАВНЫЙ ИГРОВОЙ ЦИКЛ (ОБНОВЛЕНИЕ И 3D-РЕНДЕР)
      ****************************************************************/
     let lastTime = performance.now();
 
@@ -1565,7 +2142,6 @@
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
-      // В меню камера плавно вращается вокруг героя
       if (GameState.mode === 'MENU') {
         const t = now * 0.0005;
         playerGroup.position.set(0, 0, 0);
@@ -1580,7 +2156,6 @@
         updateGameplay(dt, now);
       }
 
-      // Камера жестко следует за персонажем, удерживая его строго в центре экрана
       const p = GameState.player;
       if (p) {
         camera.position.set(p.x, 16.5, p.z + 12.5);
@@ -1595,13 +2170,12 @@
       const p = GameState.player;
       GameState.elapsedTime += dt;
 
-      // 1. Перемещение игрока и тороидальный сдвиг 3D-декораций
+      // 1. Перемещение игрока и тороидальный сдвиг мира
       const { vx, vz } = getMovementVector();
       if (Math.abs(vx) > 0.01 || Math.abs(vz) > 0.01) {
         p.x += vx * p.speed * dt;
         p.z += vz * p.speed * dt;
         playerGroup.rotation.y = Math.atan2(vx, vz);
-        // Легкое покачивание при беге
         playerGroup.position.y = Math.abs(Math.sin(now * 0.015)) * 0.18;
       } else {
         playerGroup.position.y = 0;
@@ -1614,7 +2188,6 @@
         playerWeaponMesh.rotation.z += dt * 3.5;
       }
 
-      // Бесшовное перемещение пола и 3D-декораций вокруг игрока
       floorMesh.position.x = p.x;
       floorMesh.position.z = p.z;
       floorTexture.offset.set(p.x * 0.25, -p.z * 0.25);
@@ -1625,16 +2198,35 @@
         if (prop.position.x - p.x < -halfWrap) prop.position.x += WRAP_SIZE;
         if (prop.position.z - p.z > halfWrap) prop.position.z -= WRAP_SIZE;
         if (prop.position.z - p.z < -halfWrap) prop.position.z += WRAP_SIZE;
-        if (prop.userData.holo) {
-          prop.userData.holo.rotation.y += dt * 2;
-        }
+        if (prop.userData.holo) prop.userData.holo.rotation.y += dt * 2;
       }
 
-      // 2. Авто-стрельба
+      // 2. Авто-стрельба и ЭМИ-Нова
       p.fireCooldown -= dt;
       if (p.fireCooldown <= 0) {
         fireWeapon();
         p.fireCooldown = p.fireDelay;
+      }
+
+      if (p.empLevel > 0) {
+        p.empTimer -= dt;
+        if (p.empTimer <= 0) {
+          triggerEmpNova();
+          p.empTimer = 3.5;
+        }
+      }
+
+      // Обновление расширяющихся колец ЭМИ-Новы
+      for (let i = GameState.shockwaves.length - 1; i >= 0; i--) {
+        const sw = GameState.shockwaves[i];
+        sw.scale += dt * 18;
+        sw.mesh.position.set(p.x, 0.15, p.z);
+        sw.mesh.scale.setScalar(sw.scale);
+        sw.mesh.material.opacity = Math.max(0, 1 - sw.scale / sw.maxScale);
+        if (sw.scale >= sw.maxScale) {
+          scene.remove(sw.mesh);
+          GameState.shockwaves.splice(i, 1);
+        }
       }
 
       // 3. Орбитальные дроны
@@ -1653,15 +2245,20 @@
         }
       }
 
-      // 4. Спавн волн врагов
+      // 4. Таймер спавна Босса (каждые 45 секунд) и обычных волн
+      if (GameState.elapsedTime >= GameState.nextBossTime && !GameState.activeBoss) {
+        spawnEnemy(true);
+        GameState.nextBossTime += 45;
+      }
+
       GameState.spawnTimer -= dt;
       const spawnInterval = Math.max(0.22, 0.95 - GameState.elapsedTime * 0.008);
       if (GameState.spawnTimer <= 0 && GameState.enemies.length < 75) {
-        spawnEnemy();
+        spawnEnemy(false);
         GameState.spawnTimer = spawnInterval;
       }
 
-      // 5. Обновление снарядов
+      // 5. Обновление снарядов (с поддержкой Крит. урона, Крио-заморозки и Рикошета)
       for (let i = GameState.projectiles.length - 1; i >= 0; i--) {
         const proj = GameState.projectiles[i];
         proj.x += proj.vx * dt;
@@ -1676,12 +2273,40 @@
           if (proj.hitSet.has(e)) continue;
 
           if (Math.hypot(e.x - proj.x, e.z - proj.z) < e.radius + 0.45) {
-            e.hp -= proj.damage;
+            const isCrit = Math.random() < p.critChance;
+            const finalDmg = isCrit ? proj.damage * 2.0 : proj.damage;
+            e.hp -= finalDmg;
             e.hitFlash = 0.1;
-            proj.hitSet.add(e);
-            proj.pierce -= 1;
-            showFloatingDamage(e.x, e.z, proj.damage);
+            if (p.cryoShot) e.slowTimer = 2.5;
 
+            proj.hitSet.add(e);
+            showFloatingDamage(e.x, e.z, isCrit ? `${Math.round(finalDmg)}!` : finalDmg, isCrit ? '#ff0055' : (p.cryoShot ? '#00f3ff' : '#fcee0a'));
+
+            // Проверка рикошета в соседнюю цель
+            if (proj.ricochet > 0) {
+              proj.ricochet -= 1;
+              let nextTarget = null;
+              let bestDist = 12;
+              for (const other of GameState.enemies) {
+                if (!proj.hitSet.has(other)) {
+                  const d = Math.hypot(other.x - proj.x, other.z - proj.z);
+                  if (d < bestDist) {
+                    bestDist = d;
+                    nextTarget = other;
+                  }
+                }
+              }
+              if (nextTarget) {
+                const ang = Math.atan2(nextTarget.z - proj.z, nextTarget.x - proj.x);
+                proj.vx = Math.cos(ang) * proj.speed;
+                proj.vz = Math.sin(ang) * proj.speed;
+                proj.mesh.rotation.y = -ang;
+                proj.life = Math.max(proj.life, 0.7);
+                break;
+              }
+            }
+
+            proj.pierce -= 1;
             if (proj.pierce <= 0) {
               removeProj = true;
               break;
@@ -1695,13 +2320,32 @@
         }
       }
 
-      // 6. Обновление врагов и проверка столкновений с героем
+      // 6. Обновление врагов и Босса
       for (let i = GameState.enemies.length - 1; i >= 0; i--) {
         const e = GameState.enemies[i];
 
         if (e.hp <= 0) {
           spawnXpGem(e.x, e.z, e.xpValue);
-          spawnExplosion(e.x, e.z, 0xff0055);
+          spawnExplosion(e.x, e.z, e.isBoss ? 0xfcee0a : 0xff0055);
+
+          // Вампиризм при убийстве
+          if (p.lifesteal > 0) {
+            p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
+          }
+
+          if (e.isBoss) {
+            // Смерть босса: спавним 3D Кибер-сундук и россыпь монет
+            spawnBossChest(e.x, e.z);
+            for (let c = 0; c < 8; c++) {
+              spawnCoin(e.x + (Math.random() - 0.5) * 3, e.z + (Math.random() - 0.5) * 3, 5);
+            }
+            GameState.activeBoss = null;
+            document.getElementById('boss-hud').classList.remove('active');
+            triggerHaptic('success');
+          } else if (Math.random() < 0.42) {
+            spawnCoin(e.x, e.z, 2);
+          }
+
           scene.remove(e.mesh);
           GameState.enemies.splice(i, 1);
           GameState.kills += 1;
@@ -1710,28 +2354,41 @@
           continue;
         }
 
+        if (e.shieldRing) {
+          e.shieldRing.rotation.z += dt * 2.5;
+        }
+
         const dx = p.x - e.x;
         const dz = p.z - e.z;
         const dist = Math.hypot(dx, dz);
 
+        // Крио-замедление
+        let moveSpd = e.speed;
+        if (e.slowTimer > 0) {
+          e.slowTimer -= dt;
+          moveSpd *= 0.6;
+        }
+
         if (dist > 0.01) {
-          e.x += (dx / dist) * e.speed * dt;
-          e.z += (dz / dist) * e.speed * dt;
+          e.x += (dx / dist) * moveSpd * dt;
+          e.z += (dz / dist) * moveSpd * dt;
           e.mesh.position.set(e.x, 0, e.z);
           e.mesh.rotation.y = Math.atan2(dx, dz);
         }
 
-        // Подсветка при получении урона
         if (e.hitFlash > 0) {
           e.hitFlash -= dt;
           e.bodyMesh.material.emissiveIntensity = 1.8;
+        } else if (e.slowTimer > 0) {
+          e.bodyMesh.material.emissive.setHex(0x00f3ff);
+          e.bodyMesh.material.emissiveIntensity = 0.85;
         } else {
-          e.bodyMesh.material.emissiveIntensity = 0.45;
+          if (!e.isBoss && e.baseEmissiveHex) e.bodyMesh.material.emissive.setHex(e.baseEmissiveHex);
+          e.bodyMesh.material.emissiveIntensity = e.isBoss ? 0.65 : 0.45;
         }
 
-        // Контактный урон по герою
         if (dist < e.radius + 0.55) {
-          p.hp -= 22 * dt;
+          p.hp -= (e.isBoss ? 38 : 22) * dt;
           if (p.hp <= 0) {
             p.hp = 0;
             updateHudUI();
@@ -1741,7 +2398,7 @@
         }
       }
 
-      // 7. Притяжение и сбор кристаллов опыта
+      // 7. Сбор кристаллов опыта
       for (let i = GameState.xpGems.length - 1; i >= 0; i--) {
         const g = GameState.xpGems[i];
         g.mesh.rotation.y += dt * 3;
@@ -1760,7 +2417,44 @@
         }
       }
 
-      // 8. Анимация частиц
+      // 8. Сбор золотых монет (Кибер-кредитов)
+      for (let i = GameState.coins.length - 1; i >= 0; i--) {
+        const c = GameState.coins[i];
+        c.mesh.rotation.z += dt * 4;
+        const d = Math.hypot(p.x - c.x, p.z - c.z);
+
+        if (d < p.magnetRadius) {
+          c.x += ((p.x - c.x) / d) * 16 * dt;
+          c.z += ((p.z - c.z) / d) * 16 * dt;
+          c.mesh.position.set(c.x, 0.55, c.z);
+        }
+
+        if (d < 0.9) {
+          scene.remove(c.mesh);
+          GameState.coins.splice(i, 1);
+          const gained = Math.max(1, Math.round(c.value * p.coinMultiplier));
+          SaveData.coins += gained;
+          GameState.runCoins += gained;
+          AudioEngine.play('coin');
+          saveProgress();
+          updateHudUI();
+        }
+      }
+
+      // 9. Подбор 3D Кибер-сундука Босса
+      for (let i = GameState.chests.length - 1; i >= 0; i--) {
+        const ch = GameState.chests[i];
+        ch.mesh.rotation.y += dt * 1.8;
+        const d = Math.hypot(p.x - ch.x, p.z - ch.z);
+        if (d < 1.55) {
+          scene.remove(ch.mesh);
+          GameState.chests.splice(i, 1);
+          triggerChestModal();
+          break;
+        }
+      }
+
+      // 10. Частицы
       for (let i = GameState.particles.length - 1; i >= 0; i--) {
         const pt = GameState.particles[i];
         pt.life -= dt;
@@ -1780,10 +2474,11 @@
     }
 
     /****************************************************************
-     * 9. НАВИГАЦИЯ ПО ЭКРАНАМ И ОБРАБОТЧИКИ СОБЫТИЙ
+     * 10. НАВИГАЦИЯ ПО ЭКРАНАМ И ИНИЦИАЛИЗАЦИЯ
      ****************************************************************/
     const screens = {
       menu: document.getElementById('screen-menu'),
+      shop: document.getElementById('screen-shop'),
       chars: document.getElementById('screen-chars'),
       leaderboard: document.getElementById('screen-leaderboard'),
       settings: document.getElementById('screen-settings'),
@@ -1793,6 +2488,7 @@
     function showScreen(name) {
       AudioEngine.play('click');
       triggerHaptic('light');
+      updateMenuWalletUI();
       Object.values(screens).forEach(s => s.classList.remove('active'));
       if (screens[name]) screens[name].classList.add('active');
     }
@@ -1800,6 +2496,7 @@
     function startGame() {
       document.getElementById('modal-gameover').classList.remove('active');
       document.getElementById('modal-levelup').classList.remove('active');
+      document.getElementById('modal-chest').classList.remove('active');
       resetGameState();
       showScreen('hud');
       GameState.mode = 'PLAYING';
@@ -1812,7 +2509,7 @@
         { name: 'KUSANAGI', score: 275 },
         { name: 'V_MERCENARY', score: 190 },
         { name: 'ZERO_COOL', score: 120 },
-        { name: `${tgUsername} (Вы)`, score: AppConfig.bestScore, me: true }
+        { name: `${tgUsername} (Вы)`, score: SaveData.bestScore, me: true }
       ].sort((a, b) => b.score - a.score);
 
       box.innerHTML = entries.map((item, idx) => `
@@ -1823,8 +2520,11 @@
       `).join('');
     }
 
-    // Кнопки главного меню
     document.getElementById('btn-play').addEventListener('click', startGame);
+    document.getElementById('btn-shop').addEventListener('click', () => {
+      renderShop();
+      showScreen('shop');
+    });
     document.getElementById('btn-chars').addEventListener('click', () => showScreen('chars'));
     document.getElementById('btn-leaderboard').addEventListener('click', () => {
       renderLeaderboard();
@@ -1832,7 +2532,6 @@
     });
     document.getElementById('btn-settings').addEventListener('click', () => showScreen('settings'));
 
-    // Выбор персонажа
     document.querySelectorAll('.char-card').forEach(card => {
       card.addEventListener('click', () => {
         AudioEngine.play('click');
@@ -1847,24 +2546,30 @@
       });
     });
 
+    document.getElementById('btn-shop-back').addEventListener('click', () => showScreen('menu'));
     document.getElementById('btn-chars-start').addEventListener('click', startGame);
     document.getElementById('btn-chars-back').addEventListener('click', () => showScreen('menu'));
     document.getElementById('btn-leader-back').addEventListener('click', () => showScreen('menu'));
     document.getElementById('btn-settings-back').addEventListener('click', () => showScreen('menu'));
 
-    // Выход в меню во время игры и после Game Over
     document.getElementById('btn-hud-exit').addEventListener('click', () => {
+      saveProgress();
       GameState.mode = 'MENU';
       showScreen('menu');
     });
     document.getElementById('btn-restart').addEventListener('click', startGame);
+    document.getElementById('btn-go-shop').addEventListener('click', () => {
+      document.getElementById('modal-gameover').classList.remove('active');
+      GameState.mode = 'MENU';
+      renderShop();
+      showScreen('shop');
+    });
     document.getElementById('btn-go-menu').addEventListener('click', () => {
       document.getElementById('modal-gameover').classList.remove('active');
       GameState.mode = 'MENU';
       showScreen('menu');
     });
 
-    // Переключатели настроек
     document.getElementById('toggle-sound').addEventListener('click', (e) => {
       AppConfig.sound = !AppConfig.sound;
       e.target.textContent = AppConfig.sound ? 'ВКЛ' : 'ВЫКЛ';
@@ -1883,14 +2588,13 @@
       e.target.classList.toggle('off', !AppConfig.highParticles);
     });
 
-    // Адаптация под изменение размера окна
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Старт цикла рендера
+    loadProgress();
     requestAnimationFrame(animate);
   </script>
 </body>
