@@ -1,349 +1,1897 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Пепельный Тракт</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-  :root {
-    --bg: #0d0914; --panel: #16121f; --card: #1e192c; --border: #3a2f54;
-    --gold: #ffc857; --hp: #e63946; --accent: #8a2be2; --text: #e0dced; --muted: #8b839c;
-    --btn: #2a233b; --btn-hover: #3d3356;
-  }
-  * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-  body { background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>CYBER SURVIVOR // TMA 3D</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #06060c;
+      --panel-bg: rgba(12, 14, 28, 0.88);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff0055;
+      --neon-yellow: #fcee0a;
+      --neon-green: #00ff88;
+      --text-main: #e8f4ff;
+      --font-main: 'Segoe UI', Roboto, Helvetica, sans-serif;
+    }
 
-  /* ПАНЕЛЬ СТАТИСТИКИ */
-  .top-bar { background: var(--panel); padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; z-index: 10; }
-  .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; }
-  .stat-pill { background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.05); }
-  .hp-bar-wrap { width: 100%; height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
-  .hp-bar-fill { height: 100%; background: var(--hp); transition: width 0.3s; }
-  
-  .progress-track { display: flex; gap: 4px; padding: 10px 12px; background: #08060a; }
-  .dot { flex: 1; height: 4px; background: #1e192c; border-radius: 2px; }
-  .dot.done { background: var(--accent); }
-  .dot.current { background: var(--gold); box-shadow: 0 0 5px var(--gold); }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  /* ЦЕНТРАЛЬНАЯ СЦЕНА (ИГРОВАЯ КАРТОЧКА) */
-  .stage { flex: 1; padding: 16px; display: flex; flex-direction: column; justify-content: center; position: relative; }
-  
-  .game-card {
-    background: var(--card); border: 2px solid var(--border); border-radius: 20px; 
-    overflow: hidden; display: flex; flex-direction: column; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      touch-action: none;
+    }
 
-  .card-img-wrap { width: 100%; height: 220px; position: relative; background: #000; }
-  .card-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: 0.3s; }
-  .card-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid var(--accent); padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; backdrop-filter: blur(4px); z-index: 2; }
-  
-  .card-content { padding: 16px; display: flex; flex-direction: column; flex: 1; }
-  .card-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; text-align: center; color: var(--gold); }
-  .card-desc { font-size: 14px; color: var(--muted); line-height: 1.5; text-align: center; margin-bottom: 16px; min-height: 42px; }
+    /* 3D Canvas */
+    #game-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
 
-  /* КНОПКИ ВЫБОРА */
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
-  .actions.single { grid-template-columns: 1fr; }
-  .btn { background: var(--btn); border: 1px solid var(--border); color: var(--text); padding: 14px 10px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.1s; }
-  .btn:active { background: var(--btn-hover); transform: scale(0.96); }
-  .btn-hint { font-size: 10px; color: var(--muted); font-weight: normal; }
-  .btn-accent { border-color: var(--hp); background: rgba(230, 57, 70, 0.1); }
+    /* Эффект киберпанк-сканлайнов и виньетки */
+    .cyber-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background:
+        radial-gradient(circle at center, transparent 55%, rgba(4, 4, 10, 0.85) 100%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 3px);
+    }
 
-  /* НИЖНЯЯ ПАНЕЛЬ ИНВЕНТАРЯ */
-  .bottom-bar { background: var(--panel); border-top: 1px solid var(--border); padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; z-index: 10; }
-  .slot { background: var(--btn); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; text-align: center; font-size: 11px; color: var(--muted); cursor: pointer; transition: 0.1s; }
-  .slot:active { transform: scale(0.92); }
-  .slot-icon { font-size: 20px; margin-bottom: 4px; display: block; }
-  .slot-stat { color: var(--text); font-weight: bold; margin-top: 2px; }
+    /* Базовые экраны */
+    .screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(env(safe-area-inset-top, 16px) + 12px) 20px calc(env(safe-area-inset-bottom, 16px) + 16px);
+      backdrop-filter: blur(4px);
+      background: linear-gradient(180deg, rgba(6, 6, 14, 0.78) 0%, rgba(10, 8, 24, 0.55) 50%, rgba(6, 6, 14, 0.9) 100%);
+      animation: fadeIn 0.25s ease-out;
+    }
 
-  /* ЭФФЕКТЫ БОЯ */
-  .hit-shake { animation: shake 0.4s; }
-  @keyframes shake { 0%, 100% { transform: translateX(0); filter: brightness(1); } 25% { transform: translateX(-8px); filter: brightness(2) 0; } 75% { transform: translateX(8px); } }
+    .screen.active {
+      display: flex;
+    }
 
-</style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Заголовки в стиле Киберпанк */
+    .cyber-header {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .cyber-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--bg-dark);
+      background: var(--neon-yellow);
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+      margin-bottom: 8px;
+    }
+
+    .cyber-title {
+      font-size: clamp(28px, 7vw, 42px);
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow:
+        0 0 10px var(--neon-cyan),
+        0 0 25px rgba(0, 243, 255, 0.6),
+        3px 3px 0px var(--neon-pink);
+      line-height: 1.05;
+    }
+
+    .cyber-subtitle {
+      font-size: 13px;
+      color: var(--neon-cyan);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 6px;
+      opacity: 0.9;
+    }
+
+    /* Кнопки меню */
+    .menu-buttons {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin: auto 0;
+    }
+
+    .cyber-btn {
+      position: relative;
+      width: 100%;
+      padding: 16px 22px;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-main);
+      background: var(--panel-bg);
+      border: 1px solid var(--neon-cyan);
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.18), inset 0 0 12px rgba(0, 243, 255, 0.08);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cyber-btn::after {
+      content: "///";
+      font-size: 12px;
+      color: var(--neon-cyan);
+      opacity: 0.7;
+    }
+
+    .cyber-btn:active {
+      transform: scale(0.97);
+    }
+
+    .cyber-btn.primary {
+      background: linear-gradient(90deg, var(--neon-pink) 0%, #b800ff 100%);
+      border-color: var(--neon-yellow);
+      color: #fff;
+      font-size: 20px;
+      padding: 19px 24px;
+      box-shadow: 0 0 24px rgba(255, 0, 85, 0.55);
+    }
+
+    .cyber-btn.primary::after {
+      content: "▶";
+      color: var(--neon-yellow);
+      font-size: 16px;
+    }
+
+    /* Выбранный герой в главном меню */
+    .current-hero-pill {
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid rgba(0, 243, 255, 0.35);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .current-hero-pill span {
+      color: var(--neon-yellow);
+      font-weight: 700;
+    }
+
+    /* Карточки выбора персонажей */
+    .char-grid {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin: auto 0;
+    }
+
+    .char-card {
+      background: var(--panel-bg);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      padding: 16px;
+      clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .char-card.selected {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 22px rgba(0, 243, 255, 0.35), inset 0 0 18px rgba(0, 243, 255, 0.12);
+    }
+
+    .char-card.samurai.selected {
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 22px rgba(255, 0, 85, 0.4), inset 0 0 18px rgba(255, 0, 85, 0.15);
+    }
+
+    .char-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .char-name {
+      font-size: 19px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .char-role {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .char-desc {
+      font-size: 13px;
+      color: #b4c6db;
+      margin-bottom: 12px;
+      line-height: 1.35;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .stat-label {
+      width: 95px;
+      color: #9ab0c7;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-bar-bg {
+      flex: 1;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    /* Таблица лидеров и Настройки */
+    .panel-box {
+      width: 100%;
+      max-width: 380px;
+      background: var(--panel-bg);
+      border: 1px solid var(--neon-cyan);
+      padding: 18px;
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      margin: auto 0;
+    }
+
+    .leader-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 14px;
+    }
+
+    .leader-row.me {
+      color: var(--neon-yellow);
+      font-weight: 700;
+      background: rgba(252, 238, 10, 0.08);
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 15px;
+    }
+
+    .toggle-btn {
+      padding: 6px 14px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.15);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .toggle-btn.off {
+      border-color: #666;
+      background: rgba(255, 255, 255, 0.05);
+      color: #888;
+    }
+
+    /* Игровой интерфейс (HUD) */
+    #screen-hud {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      display: none;
+      pointer-events: none;
+    }
+
+    #screen-hud.active {
+      display: block;
+    }
+
+    .hud-top {
+      position: absolute;
+      top: env(safe-area-inset-top, 10px);
+      left: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .xp-bar-container {
+      width: 100%;
+      height: 12px;
+      background: rgba(6, 8, 18, 0.85);
+      border: 1px solid var(--neon-cyan);
+      border-radius: 3px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+    }
+
+    #xp-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
+      transition: width 0.15s ease-out;
+    }
+
+    .hud-stats-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 14px;
+      text-shadow: 0 2px 4px #000;
+    }
+
+    .hud-pill {
+      background: rgba(8, 10, 22, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 5px 10px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hp-bar-wrap {
+      width: 120px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid var(--neon-pink);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #hp-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: var(--neon-pink);
+      transition: width 0.15s ease;
+    }
+
+    .hud-menu-btn {
+      pointer-events: auto;
+      background: rgba(12, 14, 28, 0.85);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Виртуальный джойстик строго по центру внизу */
+    #joystick-zone {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 16px) + 28px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 243, 255, 0.12) 0%, rgba(6, 8, 20, 0.55) 100%);
+      border: 2px solid rgba(0, 243, 255, 0.45);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 15px rgba(0, 243, 255, 0.15);
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #joystick-zone::before {
+      content: "";
+      position: absolute;
+      width: 84%;
+      height: 84%;
+      border-radius: 50%;
+      border: 1px dashed rgba(0, 243, 255, 0.3);
+      pointer-events: none;
+    }
+
+    #joystick-knob {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff, var(--neon-cyan));
+      box-shadow: 0 0 16px var(--neon-cyan);
+      border: 2px solid #fff;
+      pointer-events: none;
+      transform: translate(0px, 0px);
+      transition: transform 0.04s linear;
+    }
+
+    /* Модальные окна (Level Up / Game Over) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(4, 5, 12, 0.88);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .buff-cards {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .buff-card {
+      background: linear-gradient(135deg, rgba(16, 22, 42, 0.95), rgba(10, 12, 24, 0.95));
+      border: 1px solid var(--neon-yellow);
+      padding: 14px 16px;
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 0 16px rgba(252, 238, 10, 0.2);
+      transition: transform 0.12s ease, border-color 0.12s ease;
+    }
+
+    .buff-card:active {
+      transform: scale(0.97);
+      border-color: var(--neon-cyan);
+    }
+
+    .buff-icon {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      background: rgba(252, 238, 10, 0.12);
+      border: 1px solid var(--neon-yellow);
+      border-radius: 6px;
+    }
+
+    .buff-info h4 {
+      font-size: 16px;
+      color: var(--neon-yellow);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .buff-info p {
+      font-size: 12px;
+      color: #c2d4e8;
+      line-height: 1.3;
+    }
+
+    /* Всплывающий урон */
+    #floating-texts {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 6;
+      overflow: hidden;
+    }
+
+    .dmg-text {
+      position: absolute;
+      font-weight: 900;
+      font-size: 14px;
+      text-shadow: 0 0 6px #000, 1px 1px 0 #000;
+      pointer-events: none;
+      animation: floatUp 0.65s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
+      40% { opacity: 1; transform: translate(-50%, -18px) scale(1.1); }
+      100% { opacity: 0; transform: translate(-50%, -34px) scale(0.85); }
+    }
+  </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <div class="stats-row">
-    <div class="stat-pill">❤️ <span id="hp-txt">100/100</span></div>
-    <div class="stat-pill">⚔️ <span id="atk-txt">12</span></div>
-    <div class="stat-pill">🛡️ <span id="def-txt">3</span></div>
-    <div class="stat-pill" style="color:var(--gold)">🪙 <span id="gold-txt">0</span></div>
+  <!-- 3D Сцена -->
+  <canvas id="game-canvas"></canvas>
+  <div class="cyber-overlay"></div>
+  <div id="floating-texts"></div>
+
+  <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
+  <div id="screen-menu" class="screen active">
+    <div class="cyber-header">
+      <div class="cyber-badge" id="tg-user-greeting">SYSTEM ONLINE // NEO-TOKYO</div>
+      <h1 class="cyber-title">CYBER<br/>SURVIVOR</h1>
+      <div class="cyber-subtitle">Протокол выживания 2099</div>
+    </div>
+
+    <div class="menu-buttons">
+      <button class="cyber-btn primary" id="btn-play">ИГРАТЬ</button>
+      <button class="cyber-btn" id="btn-chars">Персонажи</button>
+      <button class="cyber-btn" id="btn-leaderboard">Таблица лидеров</button>
+      <button class="cyber-btn" id="btn-settings">Настройки</button>
+    </div>
+
+    <div class="current-hero-pill">
+      Активный агент: <span id="menu-selected-hero">Кибер-самурай</span>
+    </div>
   </div>
-  <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
-</div>
-<div class="progress-track" id="progress"></div>
 
-<div class="stage" id="stage">
-  <!-- Тут генерируются карточки -->
-</div>
+  <!-- ЭКРАН 2: ВЫБОР ПЕРСОНАЖЕЙ -->
+  <div id="screen-chars" class="screen">
+    <div class="cyber-header">
+      <div class="cyber-badge">SELECT OPERATIVE</div>
+      <h2 class="cyber-title" style="font-size: 26px;">ПЕРСОНАЖИ</h2>
+    </div>
 
-<div class="bottom-bar">
-  <div class="slot" onclick="alert('Твое Оружие: ' + state.eq.weapon.name + ' (+'+state.eq.weapon.stat+' АТК)')">
-    <span class="slot-icon">🗡️</span>Оружие<div class="slot-stat" id="eq-w">+5</div>
-  </div>
-  <div class="slot" onclick="alert('Твоя Броня: ' + state.eq.armor.name + ' (+'+state.eq.armor.stat+' ЗАЩ)')">
-    <span class="slot-icon">🛡️</span>Броня<div class="slot-stat" id="eq-a">+2</div>
-  </div>
-  <div class="slot" onclick="alert('Твое Кольцо: ' + state.eq.ring.name + ' (+'+state.eq.ring.stat+' HP)')">
-    <span class="slot-icon">💍</span>Кольцо<div class="slot-stat" id="eq-r">+0</div>
-  </div>
-  <div class="slot" onclick="alert(state.ally ? 'Напарник: ' + state.ally.name + ' (+'+state.ally.atk+' АТК)' : 'Нет напарника')">
-    <span class="slot-icon">👤</span>Напарник<div class="slot-stat" id="eq-al">Нет</div>
-  </div>
-</div>
-
-<script>
-  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-  if (tg) { tg.expand(); tg.ready(); }
-  function haptic(type = 'light') { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type); }
-
-  // Генератор картинок на лету (запросы к ИИ)
-  const imgAPI = (prompt) => `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=400&height=300&nologo=true`;
-
-  const state = {
-    step: 1, maxSteps: 7, act: 1,
-    hp: 100, maxHp: 100, baseAtk: 7, baseDef: 1, gold: 20,
-    eq: { 
-      weapon: { name: "Ржавый меч", stat: 5 }, 
-      armor: { name: "Старая накидка", stat: 2 }, 
-      ring: { name: "Пусто", stat: 0 } 
-    },
-    ally: null
-  };
-
-  function updateHUD() {
-    state.maxHp = 100 + state.eq.ring.stat;
-    if (state.hp > state.maxHp) state.hp = state.maxHp;
-    
-    document.getElementById('hp-txt').innerText = `${state.hp}/${state.maxHp}`;
-    document.getElementById('hp-bar').style.width = `${(state.hp/state.maxHp)*100}%`;
-    document.getElementById('atk-txt').innerText = state.baseAtk + state.eq.weapon.stat + (state.ally ? state.ally.atk : 0);
-    document.getElementById('def-txt').innerText = state.baseDef + state.eq.armor.stat;
-    document.getElementById('gold-txt').innerText = state.gold;
-    
-    document.getElementById('eq-w').innerText = `+${state.eq.weapon.stat}`;
-    document.getElementById('eq-a').innerText = `+${state.eq.armor.stat}`;
-    document.getElementById('eq-r').innerText = `+${state.eq.ring.stat}`;
-    document.getElementById('eq-al').innerText = state.ally ? `+${state.ally.atk}` : 'Нет';
-
-    let dots = '';
-    for(let i=1; i<=state.maxSteps; i++) {
-      dots += `<div class="dot ${i < state.step ? 'done' : i === state.step ? 'current' : ''}"></div>`;
-    }
-    document.getElementById('progress').innerHTML = dots;
-  }
-
-  function renderCard({ badge, img, title, desc, btnLeft, btnRight, actionLeft, actionRight, isSingleBtn }) {
-    const stage = document.getElementById('stage');
-    
-    let btnsHTML = '';
-    if (isSingleBtn) {
-      btnsHTML = `<button class="btn" onclick="haptic(); ${actionLeft}"><span>${btnLeft.text}</span><span class="btn-hint">${btnLeft.hint}</span></button>`;
-    } else {
-      btnsHTML = `
-        <button class="btn" onclick="haptic('medium'); ${actionLeft}"><span>${btnLeft.text}</span><span class="btn-hint">${btnLeft.hint}</span></button>
-        <button class="btn ${btnRight.isDanger ? 'btn-accent' : ''}" onclick="haptic('heavy'); ${actionRight}"><span>${btnRight.text}</span><span class="btn-hint">${btnRight.hint}</span></button>
-      `;
-    }
-
-    stage.innerHTML = `
-      <div class="game-card" id="current-card">
-        <div class="card-img-wrap">
-          <div class="card-badge">${badge}</div>
-          <img src="${img}" class="card-img" id="card-image">
+    <div class="char-grid">
+      <!-- Кибер-самурай -->
+      <div class="char-card samurai selected" data-hero="samurai">
+        <div class="char-card-header">
+          <span class="char-name" style="color: var(--neon-pink);">Кибер-самурай</span>
+          <span class="char-role" style="background: rgba(255,0,85,0.2); color: var(--neon-pink);">Штурмовик</span>
         </div>
-        <div class="card-content">
-          <div class="card-title">${title}</div>
-          <div class="card-desc">${desc}</div>
-          <div class="actions ${isSingleBtn ? 'single' : ''}">${btnsHTML}</div>
+        <p class="char-desc">Экзоскелет «Ронин-IX». Выпускает мощные плазменные дуги с повышенным базовым уроном и пробитием.</p>
+        <div class="stat-row">
+          <span class="stat-label">Урон (+40%)</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 92%; background: var(--neon-pink);"></div></div>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Скорость</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 60%; background: var(--neon-pink);"></div></div>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Броня / HP</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 85%; background: var(--neon-pink);"></div></div>
         </div>
       </div>
-    `;
-    updateHUD();
-  }
 
-  // --- ИГРОВОЙ ЦИКЛ ---
+      <!-- Уличный хакер -->
+      <div class="char-card hacker" data-hero="hacker">
+        <div class="char-card-header">
+          <span class="char-name" style="color: var(--neon-cyan);">Уличный хакер</span>
+          <span class="char-role" style="background: rgba(0,243,255,0.2); color: var(--neon-cyan);">Нетраннер</span>
+        </div>
+        <p class="char-desc">Мастер нейро-имплантов. Повышенная скорость передвижения, быстрая перезарядка и широкий нейро-магнит.</p>
+        <div class="stat-row">
+          <span class="stat-label">Урон</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 62%; background: var(--neon-cyan);"></div></div>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Скорость (+35%)</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 95%; background: var(--neon-cyan);"></div></div>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Скорострел.</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 90%; background: var(--neon-cyan);"></div></div>
+        </div>
+      </div>
+    </div>
 
-  function startStep() {
-    updateHUD();
-    if (state.step > state.maxSteps) {
-      state.act++;
-      state.step = 1;
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn primary" id="btn-chars-start">В БОЙ</button>
+      <button class="cyber-btn" id="btn-chars-back">Назад в меню</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: ТАБЛИЦА ЛИДЕРОВ -->
+  <div id="screen-leaderboard" class="screen">
+    <div class="cyber-header">
+      <div class="cyber-badge">TOP NETRUNNERS</div>
+      <h2 class="cyber-title" style="font-size: 26px;">ТАБЛИЦА ЛИДЕРОВ</h2>
+    </div>
+
+    <div class="panel-box" id="leaderboard-list"></div>
+
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn" id="btn-leader-back">Назад в меню</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН: НАСТРОЙКИ -->
+  <div id="screen-settings" class="screen">
+    <div class="cyber-header">
+      <div class="cyber-badge">SYSTEM CONFIG</div>
+      <h2 class="cyber-title" style="font-size: 26px;">НАСТРОЙКИ</h2>
+    </div>
+
+    <div class="panel-box">
+      <div class="setting-row">
+        <span>Синтезатор звука (SFX)</span>
+        <button class="toggle-btn" id="toggle-sound">ВКЛ</button>
+      </div>
+      <div class="setting-row">
+        <span>Вибрация (Telegram Haptics)</span>
+        <button class="toggle-btn" id="toggle-haptics">ВКЛ</button>
+      </div>
+      <div class="setting-row">
+        <span>3D-частицы и свечение</span>
+        <button class="toggle-btn" id="toggle-particles">ВЫСОКОЕ</button>
+      </div>
+    </div>
+
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn" id="btn-settings-back">Назад в меню</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3: ИГРОВОЙ ПРОЦЕСС (HUD + ДЖОЙСТИК) -->
+  <div id="screen-hud">
+    <div class="hud-top">
+      <div class="xp-bar-container">
+        <div id="xp-bar-fill"></div>
+      </div>
+      <div class="hud-stats-row">
+        <div class="hud-pill">
+          <span style="color: var(--neon-yellow);">УР. <span id="hud-level">1</span></span>
+          <div class="hp-bar-wrap"><div id="hp-bar-fill"></div></div>
+        </div>
+        <div class="hud-pill" style="color: var(--neon-cyan);">
+          ⏱ <span id="hud-time">00:00</span>
+        </div>
+        <div class="hud-pill" style="color: var(--neon-pink);">
+          ☠ <span id="hud-kills">0</span>
+        </div>
+        <button class="hud-menu-btn" id="btn-hud-exit">МЕНЮ</button>
+      </div>
+    </div>
+
+    <!-- Виртуальный джойстик по центру -->
+    <div id="joystick-zone">
+      <div id="joystick-knob"></div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: НОВЫЙ УРОВЕНЬ (ВЫБОР 1 ИЗ 3 БАФОВ) -->
+  <div id="modal-levelup" class="modal-overlay">
+    <div class="cyber-header">
+      <div class="cyber-badge">NEURAL UPGRADE READY</div>
+      <h2 class="cyber-title" style="font-size: 28px;">НОВЫЙ УРОВЕНЬ!</h2>
+      <div class="cyber-subtitle">Выберите 1 кибер-модификацию</div>
+    </div>
+    <div class="buff-cards" id="buff-choices"></div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: КОНЕЦ ИГРЫ -->
+  <div id="modal-gameover" class="modal-overlay">
+    <div class="cyber-header">
+      <div class="cyber-badge" style="background: var(--neon-pink); color: #fff;">CRITICAL SYSTEM FAILURE</div>
+      <h2 class="cyber-title" style="font-size: 32px;">СВЯЗЬ ПРЕРВАНА</h2>
+    </div>
+
+    <div class="panel-box" style="margin: 22px 0; text-align: center;">
+      <p style="font-size: 14px; color: #9ab0c7; margin-bottom: 10px;">ИТОГИ ОПЕРАЦИИ:</p>
+      <p style="font-size: 20px; font-weight: 800; color: var(--neon-cyan); margin-bottom: 6px;">
+        Время: <span id="go-time">00:00</span>
+      </p>
+      <p style="font-size: 20px; font-weight: 800; color: var(--neon-pink); margin-bottom: 6px;">
+        Уничтожено дронов: <span id="go-kills">0</span>
+      </p>
+      <p style="font-size: 16px; font-weight: 700; color: var(--neon-yellow);">
+        Достигнут уровень: <span id="go-level">1</span>
+      </p>
+    </div>
+
+    <div class="menu-buttons" style="margin: 0;">
+      <button class="cyber-btn primary" id="btn-restart">ПЕРЕЗАПУСК</button>
+      <button class="cyber-btn" id="btn-go-menu">В главное меню</button>
+    </div>
+  </div>
+
+  <script>
+    /****************************************************************
+     * 1. TELEGRAM MINI APP API & АУДИО-СИНТЕЗАТОР
+     ****************************************************************/
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    let tgUsername = "Кибер-Странник";
+
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try {
+        tg.setHeaderColor('#06060c');
+        tg.setBackgroundColor('#06060c');
+      } catch (e) {}
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        tgUsername = tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || tgUsername;
+      }
     }
-    
-    // Анимация бега от первого лица
-    renderCard({
-      badge: "В пути",
-      img: imgAPI(`first person view running down a dark stone road, dark fantasy rpg background, gloomy, act ${state.act}`),
-      title: `Тракт, Километр ${state.step}`,
-      desc: "Ты бежишь вперед. Туман сзади подступает всё ближе. Нужно двигаться.",
-      isSingleBtn: true,
-      btnLeft: { text: "Бежать дальше", hint: "Сделать шаг" },
-      actionLeft: "resolveEncounter()"
-    });
-  }
+    document.getElementById('tg-user-greeting').textContent = `AGENT: ${tgUsername.toUpperCase()}`;
 
-  function resolveEncounter() {
-    if (state.step === state.maxSteps) return bossEncounter();
-    
-    const roll = Math.random();
-    if (roll < 0.3) storyEvent1();
-    else if (roll < 0.6) storyEvent2();
-    else startBattle(generateEnemy());
-  }
-
-  // --- СЮЖЕТНЫЕ СОБЫТИЯ ---
-
-  function storyEvent1() {
-    renderCard({
-      badge: "Развилка",
-      img: imgAPI("dark fantasy broken bridge over mist, glowing runes, rpg landscape"),
-      title: "Разрушенный мост",
-      desc: "Прямой путь разрушен. Можно спуститься в ущелье (опасно, но есть шанс найти лут) или пойти в обход.",
-      btnLeft: { text: "В обход", hint: "Безопасно" },
-      btnRight: { text: "В ущелье", hint: "Бой и Трофей" },
-      actionLeft: "state.step++; startStep();",
-      actionRight: "startBattle(generateEnemy(), true)" // true = гарантированный лут
-    });
-  }
-
-  function storyEvent2() {
-    renderCard({
-      badge: "Алтарь",
-      img: imgAPI("dark fantasy bloody stone altar in forest glowing red, rpg"),
-      title: "Алтарь Жертвы",
-      desc: "Статуя требует крови. Если пожертвовать здоровьем, она может даровать случайный артефакт.",
-      btnLeft: { text: "Уйти", hint: "Остаться целым" },
-      btnRight: { text: "Пролить кровь", hint: "-25 ❤️, Получить вещь", isDanger: true },
-      actionLeft: "state.step++; startStep();",
-      actionRight: "state.hp -= 25; if(state.hp<=0) state.hp=1; showLoot();"
-    });
-  }
-
-  // --- БОЕВКА ---
-
-  function generateEnemy() {
-    const names = ["Скверный Мародер", "Гончая Углей", "Мертвый Стражник", "Упырь"];
-    const mult = 1 + (state.act * 0.3) + (state.step * 0.1);
-    return {
-      name: names[Math.floor(Math.random() * names.length)],
-      hp: Math.floor(40 * mult),
-      atk: Math.floor(10 * mult),
-      img: imgAPI("dark fantasy scary monster enemy, dark background, rpg character portrait")
+    const AppConfig = {
+      sound: true,
+      haptics: true,
+      highParticles: true,
+      selectedHero: 'samurai',
+      bestScore: parseInt(localStorage.getItem('cyber_survivor_best') || '0', 10)
     };
-  }
 
-  function bossEncounter() {
-    const boss = {
-      name: "Древний Страж",
-      hp: 120 * state.act,
-      atk: 18 * state.act,
-      img: imgAPI("epic dark fantasy armored boss monster with glowing eyes standing on road")
+    function triggerHaptic(type = 'light') {
+      if (!AppConfig.haptics || !tg || !tg.HapticFeedback) return;
+      try {
+        if (type === 'success' || type === 'warning' || type === 'error') {
+          tg.HapticFeedback.notificationOccurred(type);
+        } else {
+          tg.HapticFeedback.impactOccurred(type);
+        }
+      } catch (e) {}
+    }
+
+    // Процедурный Web Audio синтезатор (без внешних файлов)
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      play(type) {
+        if (!AppConfig.sound) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        if (type === 'shoot') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'xp') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(660, now);
+          osc.frequency.exponentialRampToValueAtTime(1180, now + 0.07);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.07);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        } else if (type === 'levelup') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(330, now);
+          osc.frequency.setValueAtTime(440, now + 0.09);
+          osc.frequency.setValueAtTime(660, now + 0.18);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'click') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(800, now);
+          gain.gain.setValueAtTime(0.04, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 0.04);
+          osc.start(now);
+          osc.stop(now + 0.04);
+        }
+      }
     };
-    renderCard({
-      badge: "БОСС ЛОКАЦИИ",
-      img: boss.img,
-      title: boss.name,
-      desc: `Впереди страж... Готовь оружие, или этот путь станет последним! Здоровье врага: ❤️ ${boss.hp}`,
-      btnLeft: { text: "Сбежать", hint: "-20 ❤️, назад на шаг" },
-      btnRight: { text: "В БОЙ!", hint: "Смертельная битва", isDanger: true },
-      actionLeft: "state.hp -= 20; state.step--; startStep();",
-      actionRight: `processCombat(${JSON.stringify(boss)}, true)`
+
+    /****************************************************************
+     * 2. КОНФИГУРАЦИЯ ГЕРОЕВ И БАФОВ
+     ****************************************************************/
+    const HEROES = {
+      samurai: {
+        name: 'Кибер-самурай',
+        color: 0xff0055,
+        secondaryColor: 0xfcee0a,
+        baseHp: 130,
+        baseSpeed: 6.4,
+        baseDamage: 34,
+        fireRate: 0.55,
+        projectileSpeed: 20,
+        projectileScale: 1.35,
+        magnetRadius: 4.5
+      },
+      hacker: {
+        name: 'Уличный хакер',
+        color: 0x00f3ff,
+        secondaryColor: 0x00ff88,
+        baseHp: 100,
+        baseSpeed: 8.8,
+        baseDamage: 22,
+        fireRate: 0.32,
+        projectileSpeed: 26,
+        projectileScale: 0.95,
+        magnetRadius: 6.5
+      }
+    };
+
+    const BUFF_POOL = [
+      {
+        id: 'dmg',
+        icon: '⚔️',
+        title: 'Разгон плазмы',
+        desc: 'Увеличивает урон всех атак на +30%.',
+        apply: (p) => { p.damage *= 1.3; }
+      },
+      {
+        id: 'firerate',
+        icon: '⚡',
+        title: 'Нейро-ускоритель',
+        desc: 'Повышает скорострельность оружия на +25%.',
+        apply: (p) => { p.fireDelay *= 0.78; }
+      },
+      {
+        id: 'multishot',
+        icon: '💠',
+        title: 'Мульти-протокол',
+        desc: '+1 дополнительный плазменный снаряд при каждом выстреле.',
+        apply: (p) => { p.projectilesCount += 1; }
+      },
+      {
+        id: 'orbitals',
+        icon: '🛰️',
+        title: 'Орбитальный клинок',
+        desc: 'Добавляет вращающийся вокруг героя защитный кибер-дрон.',
+        apply: (p) => { addOrbitalDrone(); }
+      },
+      {
+        id: 'speed',
+        icon: '🦿',
+        title: 'Сервоприводы ног',
+        desc: 'Повышает скорость передвижения героя на +20%.',
+        apply: (p) => { p.speed *= 1.2; }
+      },
+      {
+        id: 'magnet',
+        icon: '🧲',
+        title: 'Грави-имплант',
+        desc: '+50% к радиусу притяжения кристаллов и +20% к получаемому опыту.',
+        apply: (p) => { p.magnetRadius *= 1.5; p.xpMultiplier *= 1.2; }
+      },
+      {
+        id: 'heal',
+        icon: '❤️‍🩹',
+        title: 'Нано-регенерация',
+        desc: 'Восстанавливает 60% HP и увеличивает макс. здоровье на +35.',
+        apply: (p) => {
+          p.maxHp += 35;
+          p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.6);
+          updateHudUI();
+        }
+      },
+      {
+        id: 'pierce',
+        icon: '💥',
+        title: 'Сверхпроводник',
+        desc: 'Снаряды пробивают на +1 врага больше и летят быстрее.',
+        apply: (p) => { p.pierce += 1; p.projectileSpeed *= 1.15; }
+      }
+    ];
+
+    /****************************************************************
+     * 3. THREE.JS 3D-СЦЕНА, ОКРУЖЕНИЕ И КАМЕРА
+     ****************************************************************/
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05050c);
+    scene.fog = new THREE.FogExp2(0x05050c, 0.028);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 120);
+
+    // Освещение
+    const ambientLight = new THREE.AmbientLight(0x303860, 1.3);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(12, 26, 14);
+    scene.add(dirLight);
+
+    const playerLight = new THREE.PointLight(0xff0055, 2.2, 22);
+    playerLight.position.set(0, 3, 0);
+    scene.add(playerLight);
+
+    // Создание процедурной неоновой сетки пола
+    function createCyberFloorTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#070712';
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.24)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = 'rgba(255, 0, 85, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+      ctx.moveTo(0, 128); ctx.lineTo(256, 128);
+      ctx.stroke();
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(60, 60);
+      return tex;
+    }
+
+    const floorTexture = createCyberFloorTexture();
+    const floorGeo = new THREE.PlaneGeometry(240, 240);
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: floorTexture,
+      roughness: 0.8,
+      metalness: 0.2
     });
-  }
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    scene.add(floorMesh);
 
-  function startBattle(enemy, guaranteedLoot = false) {
-    renderCard({
-      badge: "ВРАГ НА ПУТИ",
-      img: enemy.img,
-      title: enemy.name,
-      desc: `Он преградил дорогу. \nУ врага: ❤️ ${enemy.hp} | ⚔️ ${enemy.atk}`,
-      btnLeft: { text: "Пройти мимо", hint: "Невозможно" }, // Просто для визуала 2 кнопок
-      btnRight: { text: "Атаковать", hint: "Начать автобой", isDanger: true },
-      actionLeft: "haptic('error');",
-      actionRight: `processCombat(${JSON.stringify(enemy)}, ${guaranteedLoot})`
+    // 3D-декорации вокруг (Неоновые монолиты, кибер-колонны и голограммы)
+    const propsList = [];
+    const WRAP_SIZE = 76; // Размер тороидального мира вокруг игрока
+
+    function createWorldDecorations() {
+      const pillarGeo = new THREE.BoxGeometry(1.3, 4.5, 1.3);
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x101426, roughness: 0.3, metalness: 0.8 });
+      const neonBandGeo = new THREE.BoxGeometry(1.42, 0.25, 1.42);
+      const crystalGeo = new THREE.OctahedronGeometry(0.65, 0);
+
+      for (let i = 0; i < 34; i++) {
+        const group = new THREE.Group();
+        const isCyan = i % 2 === 0;
+        const neonColor = isCyan ? 0x00f3ff : 0xff0055;
+        const neonMat = new THREE.MeshBasicMaterial({ color: neonColor });
+
+        if (i % 3 === 0) {
+          // Кибер-монолит с неоновыми кольцами
+          const base = new THREE.Mesh(pillarGeo, pillarMat);
+          base.position.y = 2.25;
+          group.add(base);
+
+          const band1 = new THREE.Mesh(neonBandGeo, neonMat);
+          band1.position.y = 3.8;
+          group.add(band1);
+
+          const band2 = new THREE.Mesh(neonBandGeo, neonMat);
+          band2.position.y = 1.4;
+          group.add(band2);
+        } else {
+          // Энергетический узел с парящим кристаллом
+          const pedGeo = new THREE.CylinderGeometry(0.8, 1.1, 0.6, 6);
+          const ped = new THREE.Mesh(pedGeo, pillarMat);
+          ped.position.y = 0.3;
+          group.add(ped);
+
+          const holo = new THREE.Mesh(crystalGeo, new THREE.MeshBasicMaterial({ color: neonColor, wireframe: true }));
+          holo.position.y = 1.6;
+          group.add(holo);
+          group.userData.holo = holo;
+        }
+
+        // Размещаем вокруг центра, избегая спавна прямо на старте (0,0)
+        let px = (Math.random() - 0.5) * WRAP_SIZE;
+        let pz = (Math.random() - 0.5) * WRAP_SIZE;
+        if (Math.hypot(px, pz) < 6) px += 8;
+
+        group.position.set(px, 0, pz);
+        scene.add(group);
+        propsList.push(group);
+      }
+    }
+    createWorldDecorations();
+
+    /****************************************************************
+     * 4. СОЗДАНИЕ 3D-МОДЕЛИ ГЕРОЯ (В ЦЕНТРЕ ЭКРАНА)
+     ****************************************************************/
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    let playerBodyMat, playerNeonMat, playerWeaponMesh, playerAuraMesh;
+
+    function buildPlayerMesh(heroKey) {
+      while (playerGroup.children.length > 0) {
+        playerGroup.remove(playerGroup.children[0]);
+      }
+      const cfg = HEROES[heroKey];
+      playerLight.color.setHex(cfg.color);
+
+      playerBodyMat = new THREE.MeshStandardMaterial({ color: 0x181c30, roughness: 0.3, metalness: 0.7 });
+      playerNeonMat = new THREE.MeshBasicMaterial({ color: cfg.color });
+      const secNeonMat = new THREE.MeshBasicMaterial({ color: cfg.secondaryColor });
+
+      // Торс
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.15, 0.55), playerBodyMat);
+      torso.position.y = 1.05;
+      playerGroup.add(torso);
+
+      // Неоновый нагрудник
+      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.6), playerNeonMat);
+      chest.position.set(0, 1.2, 0);
+      playerGroup.add(chest);
+
+      // Голова + кибер-визор
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), playerBodyMat);
+      head.position.y = 1.98;
+      playerGroup.add(head);
+
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.18, 0.35), secNeonMat);
+      visor.position.set(0, 2.0, 0.2);
+      playerGroup.add(visor);
+
+      if (heroKey === 'samurai') {
+        // Катана за спиной / в руке и кибер-наплечники
+        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.65), playerNeonMat);
+        shoulderL.position.set(-0.62, 1.5, 0);
+        const shoulderR = shoulderL.clone();
+        shoulderR.position.x = 0.62;
+        playerGroup.add(shoulderL, shoulderR);
+
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.18), secNeonMat);
+        blade.position.set(0.65, 1.35, 0.35);
+        blade.rotation.x = Math.PI / 4;
+        playerWeaponMesh = blade;
+        playerGroup.add(blade);
+      } else {
+        // Парящее голографическое кольцо хакера
+        const deck = new THREE.Mesh(
+          new THREE.TorusGeometry(0.75, 0.06, 8, 24),
+          playerNeonMat
+        );
+        deck.rotation.x = Math.PI / 2;
+        deck.position.y = 1.1;
+        playerWeaponMesh = deck;
+        playerGroup.add(deck);
+      }
+
+      // Неоновое кольцо под ногами (индикатор центра)
+      const auraGeo = new THREE.RingGeometry(0.75, 0.92, 32);
+      playerAuraMesh = new THREE.Mesh(auraGeo, new THREE.MeshBasicMaterial({
+        color: cfg.color,
+        side: THREE.DoubleSide
+      }));
+      playerAuraMesh.rotation.x = -Math.PI / 2;
+      playerAuraMesh.position.y = 0.04;
+      playerGroup.add(playerAuraMesh);
+    }
+
+    buildPlayerMesh(AppConfig.selectedHero);
+
+    /****************************************************************
+     * 5. ИГРОВОЕ СОСТОЯНИЕ И СУЩНОСТИ
+     ****************************************************************/
+    const GameState = {
+      mode: 'MENU', // 'MENU' | 'PLAYING' | 'PAUSED' | 'GAMEOVER'
+      elapsedTime: 0,
+      kills: 0,
+      spawnTimer: 0,
+      player: null,
+      enemies: [],
+      projectiles: [],
+      xpGems: [],
+      particles: [],
+      orbitals: []
+    };
+
+    function resetGameState() {
+      // Очистка старых 3D объектов со сцены
+      GameState.enemies.forEach(e => scene.remove(e.mesh));
+      GameState.projectiles.forEach(p => scene.remove(p.mesh));
+      GameState.xpGems.forEach(g => scene.remove(g.mesh));
+      GameState.particles.forEach(pt => scene.remove(pt.mesh));
+      GameState.orbitals.forEach(o => scene.remove(o.mesh));
+
+      GameState.enemies = [];
+      GameState.projectiles = [];
+      GameState.xpGems = [];
+      GameState.particles = [];
+      GameState.orbitals = [];
+
+      const cfg = HEROES[AppConfig.selectedHero];
+      buildPlayerMesh(AppConfig.selectedHero);
+      playerGroup.position.set(0, 0, 0);
+      playerGroup.rotation.set(0, 0, 0);
+
+      GameState.elapsedTime = 0;
+      GameState.kills = 0;
+      GameState.spawnTimer = 0;
+
+      GameState.player = {
+        x: 0,
+        z: 0,
+        hp: cfg.baseHp,
+        maxHp: cfg.baseHp,
+        speed: cfg.baseSpeed,
+        damage: cfg.baseDamage,
+        fireDelay: cfg.fireRate,
+        fireCooldown: 0,
+        projectileSpeed: cfg.projectileSpeed,
+        projectileScale: cfg.projectileScale,
+        projectilesCount: 1,
+        pierce: 1,
+        magnetRadius: cfg.magnetRadius,
+        xpMultiplier: 1,
+        level: 1,
+        xp: 0,
+        xpNext: 25
+      };
+
+      updateHudUI();
+    }
+
+    // Добавление орбитального дрона
+    function addOrbitalDrone() {
+      const cfg = HEROES[AppConfig.selectedHero];
+      const mesh = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.42, 0),
+        new THREE.MeshBasicMaterial({ color: cfg.secondaryColor })
+      );
+      scene.add(mesh);
+      GameState.orbitals.push({
+        mesh,
+        angle: (GameState.orbitals.length * Math.PI) / 2,
+        radius: 3.1
+      });
+    }
+
+    // Спавн врагов со всех сторон вокруг игрока
+    const enemyGeometries = [
+      new THREE.OctahedronGeometry(0.75, 0), // Быстрый дрон
+      new THREE.BoxGeometry(1.05, 1.5, 1.05), // Штурмовой бот
+      new THREE.DodecahedronGeometry(1.3, 0)  // Тяжелый мех
+    ];
+
+    function spawnEnemy() {
+      const p = GameState.player;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 21 + Math.random() * 5;
+      const ex = p.x + Math.cos(angle) * dist;
+      const ez = p.z + Math.sin(angle) * dist;
+
+      // Рост сложности со временем
+      const difficulty = 1 + GameState.elapsedTime / 45;
+      const r = Math.random();
+      let type = 0;
+      if (GameState.elapsedTime > 20 && r > 0.65) type = 1;
+      if (GameState.elapsedTime > 45 && r > 0.9) type = 2;
+
+      let hp = 26 * difficulty;
+      let speed = 3.7 + Math.random() * 0.8;
+      let color = 0xff2a6d;
+      let xpValue = 10;
+      let scale = 1;
+
+      if (type === 1) {
+        hp = 58 * difficulty;
+        speed = 3.0;
+        color = 0xff7700;
+        xpValue = 20;
+      } else if (type === 2) {
+        hp = 150 * difficulty;
+        speed = 2.2;
+        color = 0xb800ff;
+        xpValue = 45;
+        scale = 1.25;
+      }
+
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0x1a1528,
+        emissive: color,
+        emissiveIntensity: 0.45,
+        roughness: 0.4
+      });
+      const body = new THREE.Mesh(enemyGeometries[type], bodyMat);
+      body.position.y = 1.0 * scale;
+      group.add(body);
+
+      // Светящееся ядро врага
+      const eye = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.22, 0.55),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      eye.position.set(0, 1.15 * scale, 0.42);
+      group.add(eye);
+
+      group.position.set(ex, 0, ez);
+      scene.add(group);
+
+      GameState.enemies.push({
+        mesh: group,
+        bodyMesh: body,
+        x: ex,
+        z: ez,
+        hp,
+        maxHp: hp,
+        speed,
+        xpValue,
+        radius: 0.75 * scale,
+        hitFlash: 0
+      });
+    }
+
+    // Выстрел по ближайшему врагу
+    function fireWeapon() {
+      const p = GameState.player;
+      if (GameState.enemies.length === 0) return;
+
+      // Поиск ближайшего врага
+      let nearest = null;
+      let minDist = Infinity;
+      for (const e of GameState.enemies) {
+        const d = Math.hypot(e.x - p.x, e.z - p.z);
+        if (d < minDist) {
+          minDist = d;
+          nearest = e;
+        }
+      }
+      if (!nearest || minDist > 24) return;
+
+      const baseAngle = Math.atan2(nearest.z - p.z, nearest.x - p.x);
+      const count = p.projectilesCount;
+      const spread = 0.22;
+      const cfg = HEROES[AppConfig.selectedHero];
+
+      for (let i = 0; i < count; i++) {
+        const offsetAngle = (i - (count - 1) / 2) * spread;
+        const finalAngle = baseAngle + offsetAngle;
+
+        const geo = AppConfig.selectedHero === 'samurai'
+          ? new THREE.BoxGeometry(0.95 * p.projectileScale, 0.16, 0.45 * p.projectileScale)
+          : new THREE.SphereGeometry(0.28 * p.projectileScale, 8, 8);
+
+        const mat = new THREE.MeshBasicMaterial({ color: cfg.secondaryColor });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(p.x, 1.15, p.z);
+        mesh.rotation.y = -finalAngle;
+        scene.add(mesh);
+
+        GameState.projectiles.push({
+          mesh,
+          x: p.x,
+          z: p.z,
+          vx: Math.cos(finalAngle) * p.projectileSpeed,
+          vz: Math.sin(finalAngle) * p.projectileSpeed,
+          damage: p.damage,
+          pierce: p.pierce,
+          life: 1.4,
+          hitSet: new Set()
+        });
+      }
+
+      AudioEngine.play('shoot');
+    }
+
+    // Спавн кристалла опыта
+    const gemGeo = new THREE.OctahedronGeometry(0.36, 0);
+    const gemMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+
+    function spawnXpGem(x, z, value) {
+      const mesh = new THREE.Mesh(gemGeo, gemMat);
+      mesh.position.set(x, 0.5, z);
+      scene.add(mesh);
+      GameState.xpGems.push({ mesh, x, z, value });
+    }
+
+    // 3D частицы при взрыве врагов
+    const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+    function spawnExplosion(x, z, colorHex) {
+      const count = AppConfig.highParticles ? 8 : 3;
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+      for (let i = 0; i < count; i++) {
+        const mesh = new THREE.Mesh(partGeo, mat);
+        mesh.position.set(x, 1.0, z);
+        scene.add(mesh);
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 2 + Math.random() * 5;
+        GameState.particles.push({
+          mesh,
+          vx: Math.cos(angle) * spd,
+          vy: 2 + Math.random() * 4,
+          vz: Math.sin(angle) * spd,
+          life: 0.45
+        });
+      }
+    }
+
+    // Всплывающие цифры урона (проекция 3D -> 2D)
+    const floatingContainer = document.getElementById('floating-texts');
+    function showFloatingDamage(worldX, worldZ, amount, color = '#fcee0a') {
+      if (!AppConfig.highParticles) return;
+      const vec = new THREE.Vector3(worldX, 1.8, worldZ);
+      vec.project(camera);
+
+      const sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+
+      const el = document.createElement('div');
+      el.className = 'dmg-text';
+      el.style.left = `${sx}px`;
+      el.style.top = `${sy}px`;
+      el.style.color = color;
+      el.textContent = Math.round(amount);
+      floatingContainer.appendChild(el);
+      setTimeout(() => el.remove(), 650);
+    }
+
+    /****************************************************************
+     * 6. УПРАВЛЕНИЕ: ВИРТУАЛЬНЫЙ ДЖОЙСТИК ПО ЦЕНТРУ + КЛАВИАТУРА
+     ****************************************************************/
+    const joyZone = document.getElementById('joystick-zone');
+    const joyKnob = document.getElementById('joystick-knob');
+    const InputState = {
+      joyX: 0,
+      joyY: 0,
+      active: false,
+      pointerId: null,
+      keys: {}
+    };
+
+    function handleJoystickMove(clientX, clientY) {
+      const rect = joyZone.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const maxRadius = rect.width / 2 - 18;
+
+      let dx = clientX - centerX;
+      let dy = clientY - centerY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > maxRadius) {
+        dx = (dx / dist) * maxRadius;
+        dy = (dy / dist) * maxRadius;
+      }
+
+      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+      InputState.joyX = dx / maxRadius;
+      InputState.joyY = dy / maxRadius;
+    }
+
+    function resetJoystick() {
+      InputState.active = false;
+      InputState.pointerId = null;
+      InputState.joyX = 0;
+      InputState.joyY = 0;
+      joyKnob.style.transform = `translate(0px, 0px)`;
+    }
+
+    joyZone.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      AudioEngine.init();
+      InputState.active = true;
+      InputState.pointerId = e.pointerId;
+      joyZone.setPointerCapture(e.pointerId);
+      handleJoystickMove(e.clientX, e.clientY);
     });
-  }
 
-  function processCombat(enemy, guaranteedLoot) {
-    const imgEl = document.getElementById('card-image');
-    let eHp = enemy.hp;
-    const myAtk = state.baseAtk + state.eq.weapon.stat + (state.ally ? state.ally.atk : 0);
-    const myDef = state.baseDef + state.eq.armor.stat;
+    joyZone.addEventListener('pointermove', (e) => {
+      if (!InputState.active || e.pointerId !== InputState.pointerId) return;
+      handleJoystickMove(e.clientX, e.clientY);
+    });
 
-    // Имитация пошагового удара
-    const interval = setInterval(() => {
-      // Мой удар
-      eHp -= myAtk;
-      imgEl.classList.add('hit-shake');
-      haptic('medium');
-      setTimeout(() => imgEl.classList.remove('hit-shake'), 400);
+    joyZone.addEventListener('pointerup', (e) => {
+      if (e.pointerId === InputState.pointerId) resetJoystick();
+    });
+    joyZone.addEventListener('pointercancel', resetJoystick);
 
-      if (eHp <= 0) {
-        clearInterval(interval);
-        state.gold += 15 * state.act;
-        if (guaranteedLoot || Math.random() > 0.4) setTimeout(() => showLoot(), 600);
-        else { state.step++; setTimeout(() => startStep(), 600); }
+    // Поддержка WASD / Стрелок для тестирования с ПК
+    window.addEventListener('keydown', (e) => { InputState.keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { InputState.keys[e.code] = false; });
+
+    function getMovementVector() {
+      let vx = InputState.joyX;
+      let vz = InputState.joyY;
+
+      if (InputState.keys['KeyW'] || InputState.keys['ArrowUp']) vz -= 1;
+      if (InputState.keys['KeyS'] || InputState.keys['ArrowDown']) vz += 1;
+      if (InputState.keys['KeyA'] || InputState.keys['ArrowLeft']) vx -= 1;
+      if (InputState.keys['KeyD'] || InputState.keys['ArrowRight']) vx += 1;
+
+      const len = Math.hypot(vx, vz);
+      if (len > 1) {
+        vx /= len;
+        vz /= len;
+      }
+      return { vx, vz };
+    }
+
+    /****************************************************************
+     * 7. СИСТЕМА УРОВНЕЙ, БАФОВ И ОБНОВЛЕНИЯ HUD
+     ****************************************************************/
+    function updateHudUI() {
+      const p = GameState.player;
+      if (!p) return;
+
+      const xpPct = Math.min(100, (p.xp / p.xpNext) * 100);
+      document.getElementById('xp-bar-fill').style.width = `${xpPct}%`;
+
+      const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
+      document.getElementById('hp-bar-fill').style.width = `${hpPct}%`;
+
+      document.getElementById('hud-level').textContent = p.level;
+      document.getElementById('hud-kills').textContent = GameState.kills;
+
+      const mins = String(Math.floor(GameState.elapsedTime / 60)).padStart(2, '0');
+      const secs = String(Math.floor(GameState.elapsedTime % 60)).padStart(2, '0');
+      document.getElementById('hud-time').textContent = `${mins}:${secs}`;
+    }
+
+    function addXp(amount) {
+      const p = GameState.player;
+      p.xp += amount * p.xpMultiplier;
+      AudioEngine.play('xp');
+
+      if (p.xp >= p.xpNext) {
+        p.xp -= p.xpNext;
+        p.level += 1;
+        p.xpNext = Math.round(p.xpNext * 1.35 + 15);
+        triggerLevelUpModal();
+      }
+      updateHudUI();
+    }
+
+    function triggerLevelUpModal() {
+      GameState.mode = 'PAUSED';
+      resetJoystick();
+      triggerHaptic('success');
+      AudioEngine.play('levelup');
+
+      // Выбираем 3 случайных неповторяющихся бафа
+      const shuffled = [...BUFF_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
+      const container = document.getElementById('buff-choices');
+      container.innerHTML = '';
+
+      shuffled.forEach((buff) => {
+        const card = document.createElement('div');
+        card.className = 'buff-card';
+        card.innerHTML = `
+          <div class="buff-icon">${buff.icon}</div>
+          <div class="buff-info">
+            <h4>${buff.title}</h4>
+            <p>${buff.desc}</p>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          AudioEngine.play('click');
+          triggerHaptic('medium');
+          buff.apply(GameState.player);
+          document.getElementById('modal-levelup').classList.remove('active');
+          GameState.mode = 'PLAYING';
+          updateHudUI();
+        });
+        container.appendChild(card);
+      });
+
+      document.getElementById('modal-levelup').classList.add('active');
+    }
+
+    function triggerGameOver() {
+      GameState.mode = 'GAMEOVER';
+      resetJoystick();
+      triggerHaptic('error');
+
+      if (GameState.kills > AppConfig.bestScore) {
+        AppConfig.bestScore = GameState.kills;
+        localStorage.setItem('cyber_survivor_best', String(AppConfig.bestScore));
+      }
+
+      document.getElementById('go-time').textContent = document.getElementById('hud-time').textContent;
+      document.getElementById('go-kills').textContent = GameState.kills;
+      document.getElementById('go-level').textContent = GameState.player.level;
+      document.getElementById('modal-gameover').classList.add('active');
+    }
+
+    /****************************************************************
+     * 8. ГЛАВНЫЙ ИГРОВОЙ ЦИКЛ (ОБНОВЛЕНИЕ И 3D-РЕНДЕР)
+     ****************************************************************/
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      // В меню камера плавно вращается вокруг героя
+      if (GameState.mode === 'MENU') {
+        const t = now * 0.0005;
+        playerGroup.position.set(0, 0, 0);
+        playerGroup.rotation.y = t * 1.4;
+        camera.position.set(Math.sin(t) * 11, 9.5, Math.cos(t) * 11);
+        camera.lookAt(0, 1.2, 0);
+        renderer.render(scene, camera);
         return;
       }
 
-      // Удар врага
-      const dmg = Math.max(1, enemy.atk - myDef);
-      state.hp -= dmg;
-      updateHUD();
-      haptic('heavy');
-      
-      if (state.hp <= 0) {
-        clearInterval(interval);
-        alert("Ты погиб! Осколок переносит тебя в начало пути.");
-        state.hp = state.maxHp; state.step = 1;
-        startStep();
+      if (GameState.mode === 'PLAYING') {
+        updateGameplay(dt, now);
       }
-    }, 800);
-  }
 
-  // --- ЛУТ И ЭКИПИРОВКА ---
+      // Камера жестко следует за персонажем, удерживая его строго в центре экрана
+      const p = GameState.player;
+      if (p) {
+        camera.position.set(p.x, 16.5, p.z + 12.5);
+        camera.lookAt(p.x, 0.8, p.z);
+        playerLight.position.set(p.x, 3.5, p.z);
+      }
 
-  function showLoot() {
-    const types = ['weapon', 'armor', 'ring'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    const names = { weapon: ["Клык Бездны", "Эфирный Меч"], armor: ["Темные Латы", "Плащ Тени"], ring: ["Кольцо Жизни", "Руна Крови"] };
-    const name = names[type][Math.floor(Math.random()*2)];
-    
-    const mult = 1 + (state.act * 0.5) + (state.step * 0.1);
-    const stat = Math.floor((type === 'ring' ? 20 : 6) * mult);
-    const sellPrice = stat * 2;
-    
-    const statName = type === 'weapon' ? 'АТК' : type === 'armor' ? 'ЗАЩ' : 'HP';
-    const oldStat = state.eq[type].stat;
-    const diff = stat - oldStat;
-    const diffText = diff >= 0 ? `+${diff} лучше` : `${diff} хуже`;
+      renderer.render(scene, camera);
+    }
 
-    // Сохраняем сгенерированный предмет глобально для функции кнопок
-    window.tempLoot = { type, name, stat };
-    
-    let prompt = type === 'weapon' ? 'epic magic sword' : type === 'armor' ? 'epic dark fantasy armor' : 'glowing magic ring';
+    function updateGameplay(dt, now) {
+      const p = GameState.player;
+      GameState.elapsedTime += dt;
 
-    renderCard({
-      badge: "ТРОФЕЙ",
-      img: imgAPI(`${prompt} glowing isolated on black background, rpg inventory item`),
-      title: name,
-      desc: `Дает +${stat} ${statName}. <br><span style="color:${diff>=0?'#4cc9f0':'#e63946'}; font-size:12px;">(На ${diffText} твоей вещи)</span>`,
-      btnLeft: { text: "Продать", hint: `+${sellPrice} 🪙` },
-      btnRight: { text: "Надеть", hint: "Заменить старое" },
-      actionLeft: `state.gold += ${sellPrice}; state.step++; startStep();`,
-      actionRight: `state.eq['${type}'] = window.tempLoot; state.step++; startStep();`
+      // 1. Перемещение игрока и тороидальный сдвиг 3D-декораций
+      const { vx, vz } = getMovementVector();
+      if (Math.abs(vx) > 0.01 || Math.abs(vz) > 0.01) {
+        p.x += vx * p.speed * dt;
+        p.z += vz * p.speed * dt;
+        playerGroup.rotation.y = Math.atan2(vx, vz);
+        // Легкое покачивание при беге
+        playerGroup.position.y = Math.abs(Math.sin(now * 0.015)) * 0.18;
+      } else {
+        playerGroup.position.y = 0;
+      }
+
+      playerGroup.position.x = p.x;
+      playerGroup.position.z = p.z;
+
+      if (playerWeaponMesh && AppConfig.selectedHero === 'hacker') {
+        playerWeaponMesh.rotation.z += dt * 3.5;
+      }
+
+      // Бесшовное перемещение пола и 3D-декораций вокруг игрока
+      floorMesh.position.x = p.x;
+      floorMesh.position.z = p.z;
+      floorTexture.offset.set(p.x * 0.25, -p.z * 0.25);
+
+      const halfWrap = WRAP_SIZE / 2;
+      for (const prop of propsList) {
+        if (prop.position.x - p.x > halfWrap) prop.position.x -= WRAP_SIZE;
+        if (prop.position.x - p.x < -halfWrap) prop.position.x += WRAP_SIZE;
+        if (prop.position.z - p.z > halfWrap) prop.position.z -= WRAP_SIZE;
+        if (prop.position.z - p.z < -halfWrap) prop.position.z += WRAP_SIZE;
+        if (prop.userData.holo) {
+          prop.userData.holo.rotation.y += dt * 2;
+        }
+      }
+
+      // 2. Авто-стрельба
+      p.fireCooldown -= dt;
+      if (p.fireCooldown <= 0) {
+        fireWeapon();
+        p.fireCooldown = p.fireDelay;
+      }
+
+      // 3. Орбитальные дроны
+      for (const orb of GameState.orbitals) {
+        orb.angle += dt * 3.6;
+        const ox = p.x + Math.cos(orb.angle) * orb.radius;
+        const oz = p.z + Math.sin(orb.angle) * orb.radius;
+        orb.mesh.position.set(ox, 1.1, oz);
+        orb.mesh.rotation.y += dt * 5;
+
+        for (const e of GameState.enemies) {
+          if (Math.hypot(e.x - ox, e.z - oz) < e.radius + 0.55) {
+            e.hp -= p.damage * 1.4 * dt;
+            e.hitFlash = 0.08;
+          }
+        }
+      }
+
+      // 4. Спавн волн врагов
+      GameState.spawnTimer -= dt;
+      const spawnInterval = Math.max(0.22, 0.95 - GameState.elapsedTime * 0.008);
+      if (GameState.spawnTimer <= 0 && GameState.enemies.length < 75) {
+        spawnEnemy();
+        GameState.spawnTimer = spawnInterval;
+      }
+
+      // 5. Обновление снарядов
+      for (let i = GameState.projectiles.length - 1; i >= 0; i--) {
+        const proj = GameState.projectiles[i];
+        proj.x += proj.vx * dt;
+        proj.z += proj.vz * dt;
+        proj.life -= dt;
+        proj.mesh.position.set(proj.x, 1.15, proj.z);
+
+        let removeProj = proj.life <= 0;
+
+        for (let j = GameState.enemies.length - 1; j >= 0; j--) {
+          const e = GameState.enemies[j];
+          if (proj.hitSet.has(e)) continue;
+
+          if (Math.hypot(e.x - proj.x, e.z - proj.z) < e.radius + 0.45) {
+            e.hp -= proj.damage;
+            e.hitFlash = 0.1;
+            proj.hitSet.add(e);
+            proj.pierce -= 1;
+            showFloatingDamage(e.x, e.z, proj.damage);
+
+            if (proj.pierce <= 0) {
+              removeProj = true;
+              break;
+            }
+          }
+        }
+
+        if (removeProj) {
+          scene.remove(proj.mesh);
+          GameState.projectiles.splice(i, 1);
+        }
+      }
+
+      // 6. Обновление врагов и проверка столкновений с героем
+      for (let i = GameState.enemies.length - 1; i >= 0; i--) {
+        const e = GameState.enemies[i];
+
+        if (e.hp <= 0) {
+          spawnXpGem(e.x, e.z, e.xpValue);
+          spawnExplosion(e.x, e.z, 0xff0055);
+          scene.remove(e.mesh);
+          GameState.enemies.splice(i, 1);
+          GameState.kills += 1;
+          triggerHaptic('light');
+          updateHudUI();
+          continue;
+        }
+
+        const dx = p.x - e.x;
+        const dz = p.z - e.z;
+        const dist = Math.hypot(dx, dz);
+
+        if (dist > 0.01) {
+          e.x += (dx / dist) * e.speed * dt;
+          e.z += (dz / dist) * e.speed * dt;
+          e.mesh.position.set(e.x, 0, e.z);
+          e.mesh.rotation.y = Math.atan2(dx, dz);
+        }
+
+        // Подсветка при получении урона
+        if (e.hitFlash > 0) {
+          e.hitFlash -= dt;
+          e.bodyMesh.material.emissiveIntensity = 1.8;
+        } else {
+          e.bodyMesh.material.emissiveIntensity = 0.45;
+        }
+
+        // Контактный урон по герою
+        if (dist < e.radius + 0.55) {
+          p.hp -= 22 * dt;
+          if (p.hp <= 0) {
+            p.hp = 0;
+            updateHudUI();
+            triggerGameOver();
+            return;
+          }
+        }
+      }
+
+      // 7. Притяжение и сбор кристаллов опыта
+      for (let i = GameState.xpGems.length - 1; i >= 0; i--) {
+        const g = GameState.xpGems[i];
+        g.mesh.rotation.y += dt * 3;
+        const d = Math.hypot(p.x - g.x, p.z - g.z);
+
+        if (d < p.magnetRadius) {
+          g.x += ((p.x - g.x) / d) * 15 * dt;
+          g.z += ((p.z - g.z) / d) * 15 * dt;
+          g.mesh.position.set(g.x, 0.6, g.z);
+        }
+
+        if (d < 0.85) {
+          scene.remove(g.mesh);
+          GameState.xpGems.splice(i, 1);
+          addXp(g.value);
+        }
+      }
+
+      // 8. Анимация частиц
+      for (let i = GameState.particles.length - 1; i >= 0; i--) {
+        const pt = GameState.particles[i];
+        pt.life -= dt;
+        if (pt.life <= 0) {
+          scene.remove(pt.mesh);
+          GameState.particles.splice(i, 1);
+          continue;
+        }
+        pt.mesh.position.x += pt.vx * dt;
+        pt.mesh.position.y += pt.vy * dt;
+        pt.mesh.position.z += pt.vz * dt;
+        pt.vy -= 9.8 * dt;
+        pt.mesh.scale.setScalar(pt.life * 2);
+      }
+
+      updateHudUI();
+    }
+
+    /****************************************************************
+     * 9. НАВИГАЦИЯ ПО ЭКРАНАМ И ОБРАБОТЧИКИ СОБЫТИЙ
+     ****************************************************************/
+    const screens = {
+      menu: document.getElementById('screen-menu'),
+      chars: document.getElementById('screen-chars'),
+      leaderboard: document.getElementById('screen-leaderboard'),
+      settings: document.getElementById('screen-settings'),
+      hud: document.getElementById('screen-hud')
+    };
+
+    function showScreen(name) {
+      AudioEngine.play('click');
+      triggerHaptic('light');
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      if (screens[name]) screens[name].classList.add('active');
+    }
+
+    function startGame() {
+      document.getElementById('modal-gameover').classList.remove('active');
+      document.getElementById('modal-levelup').classList.remove('active');
+      resetGameState();
+      showScreen('hud');
+      GameState.mode = 'PLAYING';
+    }
+
+    function renderLeaderboard() {
+      const box = document.getElementById('leaderboard-list');
+      const entries = [
+        { name: 'AKIRA_99', score: 342 },
+        { name: 'KUSANAGI', score: 275 },
+        { name: 'V_MERCENARY', score: 190 },
+        { name: 'ZERO_COOL', score: 120 },
+        { name: `${tgUsername} (Вы)`, score: AppConfig.bestScore, me: true }
+      ].sort((a, b) => b.score - a.score);
+
+      box.innerHTML = entries.map((item, idx) => `
+        <div class="leader-row ${item.me ? 'me' : ''}">
+          <span>#${idx + 1} ${item.name}</span>
+          <span>☠ ${item.score}</span>
+        </div>
+      `).join('');
+    }
+
+    // Кнопки главного меню
+    document.getElementById('btn-play').addEventListener('click', startGame);
+    document.getElementById('btn-chars').addEventListener('click', () => showScreen('chars'));
+    document.getElementById('btn-leaderboard').addEventListener('click', () => {
+      renderLeaderboard();
+      showScreen('leaderboard');
     });
-  }
+    document.getElementById('btn-settings').addEventListener('click', () => showScreen('settings'));
 
-  // Запуск игры
-  startStep();
-</script>
+    // Выбор персонажа
+    document.querySelectorAll('.char-card').forEach(card => {
+      card.addEventListener('click', () => {
+        AudioEngine.play('click');
+        triggerHaptic('medium');
+        document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        const heroKey = card.getAttribute('data-hero');
+        AppConfig.selectedHero = heroKey;
+        document.getElementById('menu-selected-hero').textContent = HEROES[heroKey].name;
+        buildPlayerMesh(heroKey);
+      });
+    });
+
+    document.getElementById('btn-chars-start').addEventListener('click', startGame);
+    document.getElementById('btn-chars-back').addEventListener('click', () => showScreen('menu'));
+    document.getElementById('btn-leader-back').addEventListener('click', () => showScreen('menu'));
+    document.getElementById('btn-settings-back').addEventListener('click', () => showScreen('menu'));
+
+    // Выход в меню во время игры и после Game Over
+    document.getElementById('btn-hud-exit').addEventListener('click', () => {
+      GameState.mode = 'MENU';
+      showScreen('menu');
+    });
+    document.getElementById('btn-restart').addEventListener('click', startGame);
+    document.getElementById('btn-go-menu').addEventListener('click', () => {
+      document.getElementById('modal-gameover').classList.remove('active');
+      GameState.mode = 'MENU';
+      showScreen('menu');
+    });
+
+    // Переключатели настроек
+    document.getElementById('toggle-sound').addEventListener('click', (e) => {
+      AppConfig.sound = !AppConfig.sound;
+      e.target.textContent = AppConfig.sound ? 'ВКЛ' : 'ВЫКЛ';
+      e.target.classList.toggle('off', !AppConfig.sound);
+    });
+
+    document.getElementById('toggle-haptics').addEventListener('click', (e) => {
+      AppConfig.haptics = !AppConfig.haptics;
+      e.target.textContent = AppConfig.haptics ? 'ВКЛ' : 'ВЫКЛ';
+      e.target.classList.toggle('off', !AppConfig.haptics);
+    });
+
+    document.getElementById('toggle-particles').addEventListener('click', (e) => {
+      AppConfig.highParticles = !AppConfig.highParticles;
+      e.target.textContent = AppConfig.highParticles ? 'ВЫСОКОЕ' : 'НИЗКОЕ';
+      e.target.classList.toggle('off', !AppConfig.highParticles);
+    });
+
+    // Адаптация под изменение размера окна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Старт цикла рендера
+    requestAnimationFrame(animate);
+  </script>
 </body>
 </html>
